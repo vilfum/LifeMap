@@ -1,0 +1,40 @@
+# ======================================================================
+# ИГНОРИРУЕМЫЕ ФАЙЛЫ ДЛЯ ПРОЕКТА "КАРТА ЖИЗНИ"
+# ======================================================================
+
+# Файлы Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Файлы данных проекта
+data/database.db
+data/database.db-journal
+data/attachments/*
+!data/attachments/.gitkeep
+
+# Логи и временные файлы
+*.log
+*.tmp
+*.temp
+
+# Файлы IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Собранные версии
+build/
+dist/
+*.exe
+
+# Операционные системы
+.DS_Store
+Thumbs.db
+
+# Резервные копии
+*.bak
+*.backup
