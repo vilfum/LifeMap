@@ -3,7 +3,7 @@
 ГРАФИЧЕСКАЯ СЦЕНА ДЛЯ "КАРТЫ ЖИЗНИ"
 ========================================================================
 ЧАСТЬ ПРОЕКТА: Карта жизни (Альфа-версия 1.0)
-АВТОР: [Ваше Имя]
+АВТОР: vilfum
 ЛИЦЕНЗИЯ: См. файл LICENSE
 КОНФИДЕНЦИАЛЬНО: Алгоритмы визуализации и управления сценой
                  являются интеллектуальной собственностью автора.
@@ -66,6 +66,9 @@ class GraphScene(QGraphicsScene):
         node_item.positionChanged.connect(self.nodePositionChanged.emit)
         node_item.collapsedChanged.connect(self.nodeCollapsedChanged.emit)
         node_item.colorChanged.connect(self.nodeColorChanged.emit)
+        node_item.addChildRequested.connect(self.addChildNodeRequested.emit)
+        node_item.deleteRequested.connect(self.deleteNodeRequested.emit)
+        node_item.editRequested.connect(self.nodeDoubleClicked.emit)  # редактирование = двойной клик
         
         self.addItem(node_item)
         self.nodes[node_id] = node_item

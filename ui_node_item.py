@@ -3,7 +3,7 @@
 ГРАФИЧЕСКИЙ ЭЛЕМЕНТ УЗЛА ДЛЯ "КАРТЫ ЖИЗНИ"
 ========================================================================
 ЧАСТЬ ПРОЕКТА: Карта жизни (Альфа-версия 1.0)
-АВТОР: [Ваше Имя]
+АВТОР: vilfum
 ЛИЦЕНЗИЯ: См. файл LICENSE
 КОНФИДЕНЦИАЛЬНО: Алгоритмы отрисовки и поведения узлов
                  являются интеллектуальной собственностью автора.
@@ -26,6 +26,9 @@ class NodeItem(QGraphicsObject):
     """Графический элемент узла"""
     
     # Сигналы
+    addChildRequested = pyqtSignal(int, str, float, float)  # node_id, title, x, y
+    deleteRequested = pyqtSignal(int)  # node_id
+    editRequested = pyqtSignal(int)  # node_id
     doubleClicked = pyqtSignal(int)  # ID узла
     positionChanged = pyqtSignal(int, float, float)  # ID узла, x, y
     collapsedChanged = pyqtSignal(int, bool)  # ID узла, collapsed
@@ -96,6 +99,9 @@ class NodeItem(QGraphicsObject):
     def itemChange(self, change, value):
         """Обработка изменений элемента"""
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange:
+            if self.scene():
+                self.scene().update()  # Очищает "шлейф" при перетаскивании
+            
             # Эмитируем изменение позиции
             new_pos = value
             self.positionChanged.emit(self.node_id, new_pos.x(), new_pos.y())
@@ -141,11 +147,7 @@ class NodeItem(QGraphicsObject):
         )
         if ok and text:
             # Сигнал будет обработан в главном окне
-            from PyQt6.QtCore import QCoreApplication
-            for obj in QCoreApplication.instance().children():
-                if hasattr(obj, 'add_child_node'):
-                    obj.add_child_node(self.node_id, text, self.x() + 250, self.y())
-                    break
+            self.addChildRequested.emit(self.node_id, text, self.x() + 250, self.y())
     
     def _change_color(self):
         """Изменение цвета узла"""
@@ -157,12 +159,7 @@ class NodeItem(QGraphicsObject):
     
     def _delete_node(self):
         """Удаление узла"""
-        # Сигнал будет обработан в главном окне
-        from PyQt6.QtCore import QCoreApplication
-        for obj in QCoreApplication.instance().children():
-            if hasattr(obj, 'delete_node'):
-                obj.delete_node(self.node_id)
-                break
+        self.deleteRequested.emit(self.node_id)
     
     def _toggle_collapse(self):
         """Переключение состояния свертывания"""
@@ -179,7 +176,14 @@ class NodeItem(QGraphicsObject):
         pen_color = Qt.GlobalColor.black
         
         if self.isSelected():
-            pen_color = Qt.GlobalColor.yellow
+            pen_color = Qt.GlobalColor.green
+            pen_width = 3
+        else:
+            # Рамка темнее цвета узла на 30%
+            pen_color = self.color.darker(130)
+            pen_width = 2
+            
+        pen = QPen(pen_color, pen_width)
         
         # Рисуем скругленный прямоугольник
         rect = self.boundingRect()

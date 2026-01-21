@@ -3,7 +3,7 @@
 ГРАФИЧЕСКИЙ ЭЛЕМЕНТ СВЯЗИ ДЛЯ "КАРТЫ ЖИЗНИ"
 ========================================================================
 ЧАСТЬ ПРОЕКТА: Карта жизни (Альфа-версия 1.0)
-АВТОР: Жариков Артем Леонидович
+АВТОР: vilfum
 ЛИЦЕНЗИЯ: См. файл LICENSE
 КОНФИДЕНЦИАЛЬНО: Алгоритмы отрисовки и управления связями
                  являются интеллектуальной собственностью автора.
@@ -53,7 +53,7 @@ class EdgeItem(QGraphicsPathItem):
         path = QPainterPath()
         
         # Начальная точка (центр правой стороны from_item)
-        from_rect = self.from_item.rect()
+        from_rect = self.from_item.boundingRect()
         from_pos = self.from_item.pos()
         start = QPointF(
             from_pos.x() + from_rect.width(),
@@ -61,7 +61,7 @@ class EdgeItem(QGraphicsPathItem):
         )
         
         # Конечная точка (центр левой стороны to_item)
-        to_rect = self.to_item.rect()
+        to_rect = self.to_item.boundingRect()
         to_pos = self.to_item.pos()
         end = QPointF(
             to_pos.x(),

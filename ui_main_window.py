@@ -3,7 +3,7 @@
 ГЛАВНОЕ ОКНО ПРИЛОЖЕНИЯ "КАРТА ЖИЗНИ"
 ========================================================================
 ЧАСТЬ ПРОЕКТА: Карта жизни (Альфа-версия 1.0)
-АВТОР: Жариков Артем Леонидович
+АВТОР: vilfum
 ЛИЦЕНЗИЯ: См. файл LICENSE
 КОНФИДЕНЦИАЛЬНО: Дизайн интерфейса и пользовательские сценарии
                  являются интеллектуальной собственностью автора.
@@ -23,8 +23,8 @@ from PyQt6.QtWidgets import (
     QApplication, QSplitter, QFileDialog, QDialog, QLabel,
     QLineEdit, QPushButton, QCheckBox
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QPointF, QRectF
+from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap, QPainter, QBrush
 
 from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
@@ -418,11 +418,38 @@ class MainWindow(QMainWindow):
             palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
             palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
             QApplication.setPalette(palette)
-            
+
+            # Создаем текстуру для темной сетки
+            dark_texture = QPixmap(20, 20)
+            dark_texture.fill(QColor(45, 45, 45))  # Темный фон
+        
+            painter = QPainter(dark_texture)
+            painter.setPen(QColor(70, 70, 70))  # Цвет сетки (темно-серый)
+            # Рисуем точки на углах
+            painter.drawPoint(0, 0)
+            painter.drawPoint(10, 0)
+            painter.drawPoint(0, 10)
+            painter.drawPoint(10, 10)
+            painter.end()
+        
+            self.scene.setBackgroundBrush(QBrush(dark_texture))
             self.theme_action.setText("☀️ Светлая тема")
         else:
             # Светлая тема
             QApplication.setPalette(QApplication.style().standardPalette())
+            # Светлая сетка
+            light_texture = QPixmap(20, 20)
+            light_texture.fill(QColor(250, 250, 250))
+        
+            painter = QPainter(light_texture)
+            painter.setPen(QColor(230, 230, 230))  # Светло-серый
+            painter.drawPoint(0, 0)
+            painter.drawPoint(10, 0)
+            painter.drawPoint(0, 10)
+            painter.drawPoint(10, 10)
+            painter.end()
+        
+            self.scene.setBackgroundBrush(QBrush(light_texture))
             self.theme_action.setText("🌙 Темная тема")
     
     def closeEvent(self, event):
@@ -433,3 +460,21 @@ class MainWindow(QMainWindow):
             self.db_session.close()
         
         event.accept()
+
+    def add_child_node(self, parent_id: int, title: str, x: float, y: float):
+        """Добавление дочернего узла"""
+        try:
+            node = self.db_session.add_node(title, parent_id, x, y)
+            node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
+
+             # Добавляем связь
+            edge = self.db_session.add_edge(parent_id, node.id)
+            self.scene.add_edge(edge.id, parent_id, node.id)
+        
+            # Обновляем флаг родителя
+            parent_item = self.scene.nodes.get(parent_id)
+            if parent_item:
+                parent_item.set_has_children(True)
+            
+        except Exception as e:
+            print(f"Ошибка при создании дочернего узла: {e}")
