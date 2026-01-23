@@ -304,18 +304,47 @@ class MainWindow(QMainWindow):
     
     def add_child_node(self, parent_id: int, title: str, x: float, y: float):
         """Добавление дочернего узла"""
-        node = self.db_session.add_node(title, parent_id, x, y)
-        node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
+        print(f"DEBUG add_child_node: parent_id={parent_id}, title={title}, x={x}, y={y}")
+        print(f"DEBUG scene.nodes keys: {list(self.scene.nodes.keys())}")
+        try:
+            # Создаем узел в БД
+            node = self.db_session.add_node(title, parent_id, x, y)
         
-        # Добавляем связь
-        edge = self.db_session.add_edge(parent_id, node.id)
-        self.scene.add_edge(edge.id, parent_id, node.id)
+            # Создаем графический элемент узла
+            node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
         
-        # Обновляем флаг родителя
-        parent_item = self.scene.nodes.get(parent_id)
-        if parent_item:
-            # TODO: Обновить флаг has_children
-            pass
+            # Создаем связь в БД
+            edge = self.db_session.add_edge(parent_id, node.id)
+            # Проверка
+            if edge is None:
+                print(f"ОШИБКА: Не удалось создать связь в БД между {parent_id} и {node.id}")
+                return None
+        
+            # Создаем графический элемент связи
+            edge_item = self.scene.add_edge(edge.id, parent_id, node.id)
+            if edge_item is None:
+                print(f"ОШИБКА: EdgeItem не создан для связи {edge.id}")
+                print(f"  from_node_id={parent_id}, to_node_id={node.id}")
+                print(f"  from_item exists: {parent_id in self.scene.nodes}")
+                print(f"  to_item exists: {node.id in self.scene.nodes}")
+                # Можно попробовать получить узлы напрямую
+                from_item = self.scene.nodes.get(parent_id)
+                to_item = self.scene.nodes.get(node.id)
+                print(f"  from_item: {from_item}")
+                print(f"  to_item: {to_item}")
+        
+            # ИСПРАВЛЕНИЕ: ОБНОВЛЯЕМ ФЛАГ has_children 
+            parent_item = self.scene.nodes.get(parent_id)
+            if parent_item:
+                parent_item.set_has_children(True)  # Теперь родитель знает, что у него есть дети
+            
+            return node_item
+        
+        except Exception as e:
+            print(f"Ошибка при создании дочернего узла: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
     
     def delete_node(self, node_id: int):
         """Удаление узла"""

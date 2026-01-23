@@ -72,6 +72,10 @@ class GraphScene(QGraphicsScene):
         
         self.addItem(node_item)
         self.nodes[node_id] = node_item
+
+        print(f"DEBUG add_node: Добавлен узел {node_id} в словарь nodes")
+        print(f"  Текущие узлы: {list(self.nodes.keys())}")
+        
         return node_item
     
     def add_edge(self, edge_id: int, from_node_id: int, to_node_id: int,
@@ -79,6 +83,11 @@ class GraphScene(QGraphicsScene):
         """Добавление связи на сцену"""
         from_item = self.nodes.get(from_node_id)
         to_item = self.nodes.get(to_node_id)
+
+        print(f"DEBUG add_edge: edge_id={edge_id}, from={from_node_id}, to={to_node_id}")
+        print(f"  from_item in nodes: {from_node_id in self.nodes}")
+        print(f"  to_item in nodes: {to_node_id in self.nodes}")
+        print(f"  Все узлы в сцене: {list(self.nodes.keys())}")
         
         if not from_item or not to_item:
             return None
