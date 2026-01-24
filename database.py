@@ -378,6 +378,25 @@ class EncryptedSQLite:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def get_node_edges(self, node_id: int):
+        """Получение всех связей узла (и входящих, и исходящих)"""
+        self.cursor.execute("""
+            SELECT * FROM edges 
+            WHERE from_node_id = ? OR to_node_id = ?
+        """, (node_id, node_id))
+        rows = self.cursor.fetchall()
+        return [self._row_to_edge(row) for row in rows]
+
+    def has_children(self, node_id: int) -> bool:
+        """Проверка, есть ли у узла дочерние узлы"""
+        self.cursor.execute("SELECT COUNT(*) as count FROM nodes WHERE parent_id = ?", (node_id,))
+        row = self.cursor.fetchone()
+        return row['count'] > 0
+
+    def get_node_by_id(self, node_id: int):
+        """Получение узла по ID (альтернативное имя для get_node)"""
+        return self.get_node(node_id)
+
 
 class DatabaseManager:
     """Менеджер базы данных с поддержкой сессий"""

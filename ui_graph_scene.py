@@ -44,6 +44,7 @@ class GraphScene(QGraphicsScene):
         # Словари для хранения элементов
         self.nodes = {}  # node_id -> NodeItem
         self.edges = {}  # edge_id -> EdgeItem
+        self.node_edges = {}
         
         # Состояние
         self.dragging = False
@@ -94,16 +95,69 @@ class GraphScene(QGraphicsScene):
         
         try:
             edge_item = EdgeItem(edge_id, from_item, to_item, line_type, color)
-            if hasattr(edge_item, 'deleted'):
-                edge_item.deleted.connect(self.deleteEdgeRequested.emit)
+            #if hasattr(edge_item, 'deleted'):
+                #edge_item.deleted.connect(self.deleteEdgeRequested.emit)
             
             self.addItem(edge_item)
             edge_item.setZValue(-1)  # Помещаем под узлы
             self.edges[edge_id] = edge_item
+
+            if from_node_id not in self.node_edges:
+                self.node_edges[from_node_id] = set()
+            if to_node_id not in self.node_edges:
+                self.node_edges[to_node_id] = set()
+            
+            self.node_edges[from_node_id].add(edge_id)
+            self.node_edges[to_node_id].add(edge_id)
+
             return edge_item
         except Exception as e:
             print(f"Ошибка при создании связи: {e}")
             return None
+        
+    def remove_edge(self, edge_id: int):
+        """Удаление связи со сцены"""
+        edge_item = self.edges.pop(edge_id, None)
+        if edge_item:
+            self.removeItem(edge_item)
+            print(f"DEBUG: Удалена связь {edge_id}")
+            
+            # Удаляем из словаря node_edges
+            # Получаем node_id из edge_item
+            try:
+                from_node_id = edge_item.from_item.node_id
+                to_node_id = edge_item.to_item.node_id
+                
+                if from_node_id in self.node_edges:
+                    self.node_edges[from_node_id].discard(edge_id)
+                    if not self.node_edges[from_node_id]:
+                        del self.node_edges[from_node_id]
+                
+                if to_node_id in self.node_edges:
+                    self.node_edges[to_node_id].discard(edge_id)
+                    if not self.node_edges[to_node_id]:
+                        del self.node_edges[to_node_id]
+            except AttributeError:
+                pass  # Если что-то пошло не так
+
+    def remove_node(self, node_id: int):
+        """Удаление узла и всех его связей со сцены"""
+        # 1. Удаляем все связанные связи
+        self.remove_edges_for_node(node_id)
+    
+        # 2. Удаляем узел
+        node_item = self.nodes.pop(node_id, None)
+        if node_item:
+            self.removeItem(node_item)
+            print(f"DEBUG: Удален узел {node_id} со всеми связями")
+    
+    def remove_edges_for_node(self, node_id: int):
+        """Удаляет все связи, связанные с узлом"""
+        if node_id in self.node_edges:
+            # Копируем список, так как мы будем изменять словарь во время итерации
+            edge_ids = list(self.node_edges[node_id])
+            for edge_id in edge_ids:
+                self.remove_edge(edge_id)
     
     def delete_node(self, node_id: int):
         """Удаление узла со сцены"""

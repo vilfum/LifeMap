@@ -24,7 +24,7 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
     """Графический элемент связи"""
 
     # Сигналы
-    deleted = pyqtSignal(int)  # ID связи
+    #deleted = pyqtSignal(int)  # ID связи
 
     def __init__(self, edge_id: int, from_item: 'NodeItem', to_item: 'NodeItem',
                  line_type: LineType = LineType.SOLID, color: str = "#000000"):
@@ -40,7 +40,7 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
         self._path = QPainterPath()
 
         # Настройки
-        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        # self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
         self.setAcceptHoverEvents(True)
 
         # Привязываем к узлам
@@ -155,15 +155,15 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
             painter.drawPath(arrow_path)
             painter.restore()
 
-    def contextMenuEvent(self, event):
-        """Контекстное меню"""
-        menu = QMenu()
+    #def contextMenuEvent(self, event):
+        #"""Контекстное меню"""
+        #menu = QMenu()
 
-        delete_action = QAction("Удалить связь", menu)
-        delete_action.triggered.connect(lambda: self.deleted.emit(self.edge_id))
+        #delete_action = QAction("Удалить связь", menu)
+        #delete_action.triggered.connect(lambda: self.deleted.emit(self.edge_id))
 
-        menu.addAction(delete_action)
-        menu.exec(event.screenPos())
+        #menu.addAction(delete_action)
+        #menu.exec(event.screenPos())
 
     def hoverEnterEvent(self, event):
         """Обработка наведения курсора"""

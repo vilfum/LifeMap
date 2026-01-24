@@ -5,10 +5,10 @@ import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QGraphicsScene, QGraphicsView,
     QGraphicsRectItem, QGraphicsTextItem, QVBoxLayout, QWidget,
-    QInputDialog, QMenu, QAction, QColorDialog
+    QInputDialog, QMenu, QColorDialog
 )
 from PyQt6.QtCore import Qt, QRectF, pyqtSignal, QPointF
-from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QPainterPath
+from PyQt6.QtGui import QPainter, QColor, QBrush, QPen, QPainterPath, QAction
 
 
 class SimpleNodeItem(QGraphicsRectItem):

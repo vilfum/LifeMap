@@ -353,12 +353,79 @@ class MainWindow(QMainWindow):
             "Удалить узел и все дочерние узлы?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        
+    
         if reply == QMessageBox.StandardButton.Yes:
-            self.db_session.delete_node(node_id)
-            self.scene.delete_node(node_id)
+            try:
+                print(f"=== УДАЛЕНИЕ УЗЛА {node_id} ===")
             
-            # TODO: Удалить связанные связи
+                # 1. Получаем информацию об узле из БД
+                node = self.db_session.get_node(node_id)
+                if not node:
+                    print(f"ОШИБКА: Узел {node_id} не найден в БД")
+                    QMessageBox.warning(self, "Ошибка", f"Узел {node_id} не найден")
+                    return
+            
+                parent_id = node.parent_id
+            
+                # 2. Получаем все связи узла
+                node_edges = self.db_session.get_node_edges(node_id)
+                print(f"Найдено связей для удаления: {len(node_edges)}")
+            
+                # 3. Удаляем узел из БД (связи удалятся каскадно благодаря ON DELETE CASCADE)
+                self.db_session.delete_node(node_id)
+                print(f"Узел {node_id} удален из БД (связи удалены каскадно)")
+            
+                # 4. Удаляем узел и все его связи из сцены
+                # Проверяем, есть ли метод remove_edges_for_node
+                if hasattr(self.scene, 'remove_edges_for_node'):
+                    self.scene.remove_edges_for_node(node_id)
+                    print(f"Связи узла {node_id} удалены из сцены")
+                else:
+                    print(f"ВНИМАНИЕ: Метод remove_edges_for_node не найден")
+                    # Вручную удаляем связи
+                    edges_to_delete = []
+                    for edge_id, edge_item in list(self.scene.edges.items()):
+                        try:
+                            if (edge_item.from_item.node_id == node_id or 
+                                edge_item.to_item.node_id == node_id):
+                                edges_to_delete.append(edge_id)
+                        except AttributeError:
+                            continue
+                
+                    for edge_id in edges_to_delete:
+                        edge_item = self.scene.edges.pop(edge_id, None)
+                        if edge_item:
+                            self.scene.removeItem(edge_item)
+            
+                # 5. Удаляем сам узел из сцены
+                node_item = self.scene.nodes.get(node_id)
+                if node_item:
+                    self.scene.removeItem(node_item)
+                    del self.scene.nodes[node_id]
+                    print(f"Узел {node_id} удален из сцены")
+                else:
+                    print(f"ВНИМАНИЕ: Узел {node_id} не найден на сцене")
+            
+                # 6. Обновляем родительский узел (если есть)
+                if parent_id:
+                    # Проверяем, остались ли у родителя другие дети
+                    has_children = self.db_session.has_children(parent_id)
+                    parent_item = self.scene.nodes.get(parent_id)
+                    if parent_item:
+                        parent_item.set_has_children(has_children)
+                        print(f"Родительский узел {parent_id} обновлен, has_children={has_children}")
+            
+                print(f"=== УЗЕЛ {node_id} УДАЛЕН УСПЕШНО ===\n")
+            
+            except Exception as e:
+                print(f"ОШИБКА при удалении узла {node_id}: {e}")
+                import traceback
+                traceback.print_exc()
+            
+                QMessageBox.critical(
+                    self, "Ошибка удаления",
+                    f"Не удалось удалить узел:\n{str(e)}"
+                )
     
     def delete_edge(self, edge_id: int):
         """Удаление связи"""
