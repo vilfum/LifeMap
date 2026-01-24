@@ -391,11 +391,44 @@ class EncryptedSQLite:
         """Проверка, есть ли у узла дочерние узлы"""
         self.cursor.execute("SELECT COUNT(*) as count FROM nodes WHERE parent_id = ?", (node_id,))
         row = self.cursor.fetchone()
-        return row['count'] > 0
+        return row['count'] > 0 if row else False
 
     def get_node_by_id(self, node_id: int):
         """Получение узла по ID (альтернативное имя для get_node)"""
         return self.get_node(node_id)
+    
+    def get_all_descendants(self, node_id: int) -> List[int]:
+        """Рекурсивно получить ID всех потомков узла (включая сам узел)"""
+        descendants = [node_id]
+    
+        # Получаем прямых детей
+        self.cursor.execute("SELECT id FROM nodes WHERE parent_id = ?", (node_id,))
+        children = self.cursor.fetchall()
+    
+        # Рекурсивно получаем потомков каждого ребенка
+        for child in children:
+            child_id = child['id']
+            descendants.extend(self.get_all_descendants(child_id))
+    
+        return descendants
+    
+    def get_all_descendants_iterative(self, node_id: int) -> List[int]:
+        """Итеративно получить ID всех потомков узла (включая сам узел)"""
+        descendants = []
+        stack = [node_id]
+    
+        while stack:
+            current_id = stack.pop()
+            descendants.append(current_id)
+        
+            # Получаем детей текущего узла
+            self.cursor.execute("SELECT id FROM nodes WHERE parent_id = ?", (current_id,))
+            children = self.cursor.fetchall()
+        
+            for child in children:
+                stack.append(child['id'])
+    
+        return descendants
 
 
 class DatabaseManager:

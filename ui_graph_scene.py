@@ -249,6 +249,33 @@ class GraphScene(QGraphicsScene):
             painter.drawLine(left, y, right, y)
             y += grid_size
 
+    def remove_all_references_to_node(self, node_id: int):
+        """Удалить все ссылки на узел из сцены"""
+        # Удаляем узел из словаря
+        if node_id in self.nodes:
+            del self.nodes[node_id]
+        
+        # Удаляем связи, связанные с этим узлом
+        edges_to_delete = []
+        for edge_id, edge_item in self.edges.items():
+            try:
+                if (edge_item.from_item.node_id == node_id or 
+                    edge_item.to_item.node_id == node_id):
+                    edges_to_delete.append(edge_id)
+            except:
+                continue
+        
+        for edge_id in edges_to_delete:
+            edge_item = self.edges.pop(edge_id, None)
+            if edge_item:
+                self.removeItem(edge_item)
+    
+    def clear_selection_for_node(self, node_id: int):
+        """Снять выделение с узла"""
+        node_item = self.nodes.get(node_id)
+        if node_item:
+            node_item.setSelected(False)
+
 
 class GraphView(QGraphicsView):
     """Вид для графической сцены с поддержкой масштабирования"""

@@ -347,86 +347,92 @@ class MainWindow(QMainWindow):
             return None
     
     def delete_node(self, node_id: int):
-        """Удаление узла"""
+        """Удаление узла и всех его потомков"""
         reply = QMessageBox.question(
             self, "Подтверждение",
-            "Удалить узел и все дочерние узлы?",
+            "Удалить узел и ВСЕ его дочерние узлы (включая внуков и т.д.)?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
     
         if reply == QMessageBox.StandardButton.Yes:
             try:
-                print(f"=== УДАЛЕНИЕ УЗЛА {node_id} ===")
+                print(f"=== РЕКУРСИВНОЕ УДАЛЕНИЕ УЗЛА {node_id} ===")
             
-                # 1. Получаем информацию об узле из БД
+                # 1. Получаем информацию об узле до удаления
                 node = self.db_session.get_node(node_id)
                 if not node:
-                    print(f"ОШИБКА: Узел {node_id} не найден в БД")
-                    QMessageBox.warning(self, "Ошибка", f"Узел {node_id} не найден")
+                    print(f"Узел {node_id} не найден в БД")
                     return
             
                 parent_id = node.parent_id
             
-                # 2. Получаем все связи узла
-                node_edges = self.db_session.get_node_edges(node_id)
-                print(f"Найдено связей для удаления: {len(node_edges)}")
+                # 2. Получаем ВСЕХ потомков узла (рекурсивно)
+                try:
+                    # Пробуем рекурсивный метод
+                    all_descendants = self.db_session.get_all_descendants(node_id)
+                except RecursionError:
+                # Если слишком глубокая рекурсия, используем итеративный
+                    all_descendants = self.db_session.get_all_descendants_iterative(node_id)
             
-                # 3. Удаляем узел из БД (связи удалятся каскадно благодаря ON DELETE CASCADE)
+                print(f"Удаляемые узлы: {all_descendants}")
+                print(f"Количество удаляемых узлов: {len(all_descendants)}")
+            
+                # 3. Удаляем узел из БД (потомки удалятся каскадно благодаря ON DELETE CASCADE)
                 self.db_session.delete_node(node_id)
-                print(f"Узел {node_id} удален из БД (связи удалены каскадно)")
+                print(f"Узел {node_id} и все его потомки удалены из БД")
             
-                # 4. Удаляем узел и все его связи из сцены
-                # Проверяем, есть ли метод remove_edges_for_node
-                if hasattr(self.scene, 'remove_edges_for_node'):
-                    self.scene.remove_edges_for_node(node_id)
-                    print(f"Связи узла {node_id} удалены из сцены")
-                else:
-                    print(f"ВНИМАНИЕ: Метод remove_edges_for_node не найден")
-                    # Вручную удаляем связи
-                    edges_to_delete = []
-                    for edge_id, edge_item in list(self.scene.edges.items()):
-                        try:
-                            if (edge_item.from_item.node_id == node_id or 
-                                edge_item.to_item.node_id == node_id):
-                                edges_to_delete.append(edge_id)
-                        except AttributeError:
-                            continue
-                
-                    for edge_id in edges_to_delete:
-                        edge_item = self.scene.edges.pop(edge_id, None)
-                        if edge_item:
-                            self.scene.removeItem(edge_item)
+                # 4. Удаляем все связи и узлы из сцены
+                # 4.1. Собираем все связи, которые нужно удалить
+                edges_to_delete = []
+                for edge_id, edge_item in list(self.scene.edges.items()):
+                    try:
+                        # Проверяем, связана ли связь с любым из удаляемых узлов
+                        if (edge_item.from_item.node_id in all_descendants or 
+                            edge_item.to_item.node_id in all_descendants):
+                            edges_to_delete.append(edge_id)
+                    except AttributeError:
+                        continue
             
-                # 5. Удаляем сам узел из сцены
-                node_item = self.scene.nodes.get(node_id)
-                if node_item:
-                    self.scene.removeItem(node_item)
-                    del self.scene.nodes[node_id]
-                    print(f"Узел {node_id} удален из сцены")
-                else:
-                    print(f"ВНИМАНИЕ: Узел {node_id} не найден на сцене")
+                print(f"Удаляемые связи: {edges_to_delete}")
             
-                # 6. Обновляем родительский узел (если есть)
-                if parent_id:
+                # 4.2. Удаляем связи
+                for edge_id in edges_to_delete:
+                    edge_item = self.scene.edges.pop(edge_id, None)
+                    if edge_item:
+                        self.scene.removeItem(edge_item)
+                        print(f"Удалена связь {edge_id}")
+            
+                # 4.3. Удаляем все узлы (включая потомков)
+                for descendant_id in all_descendants:
+                    node_item = self.scene.nodes.get(descendant_id)
+                    if node_item:
+                        self.scene.removeItem(node_item)
+                        del self.scene.nodes[descendant_id]
+                        print(f"Удален узел {descendant_id} из сцены")
+            
+                # 5. Обновляем родительский узел (если он не был удален)
+                if parent_id and parent_id not in all_descendants:
                     # Проверяем, остались ли у родителя другие дети
-                    has_children = self.db_session.has_children(parent_id)
+                    remaining_children = self.db_session.get_children(parent_id)
+                    has_children_remaining = len(remaining_children) > 0
+                
                     parent_item = self.scene.nodes.get(parent_id)
                     if parent_item:
-                        parent_item.set_has_children(has_children)
-                        print(f"Родительский узел {parent_id} обновлен, has_children={has_children}")
+                        parent_item.set_has_children(has_children_remaining)
+                        print(f"Родительский узел {parent_id} обновлен, has_children={has_children_remaining}")
             
-                print(f"=== УЗЕЛ {node_id} УДАЛЕН УСПЕШНО ===\n")
+                print(f"=== РЕКУРСИВНОЕ УДАЛЕНИЕ УЗЛА {node_id} ЗАВЕРШЕНО ===\n")
             
             except Exception as e:
-                print(f"ОШИБКА при удалении узла {node_id}: {e}")
+                print(f"КРИТИЧЕСКАЯ ОШИБКА при рекурсивном удалении узла {node_id}: {e}")
                 import traceback
                 traceback.print_exc()
             
                 QMessageBox.critical(
                     self, "Ошибка удаления",
-                    f"Не удалось удалить узел:\n{str(e)}"
+                    f"Не удалось удалить узел и всех его потомков:\n{str(e)}"
                 )
-    
+            
     def delete_edge(self, edge_id: int):
         """Удаление связи"""
         self.db_session.delete_edge(edge_id)
