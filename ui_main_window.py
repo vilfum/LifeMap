@@ -109,10 +109,27 @@ class MainWindow(QMainWindow):
         
         # Основной layout
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)  # Убираем отступы
+        main_layout.setSpacing(0)
         
         # Создаем сцену и вид
         self.scene = GraphScene()
         self.view = GraphView(self.scene)
+
+        # ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ ДЛЯ УДАЛЕНИЯ ГРАНИЦ:
+        #self.view.setStyleSheet("""
+        #    QGraphicsView {
+        #        border: 0px;
+        #        padding: 0px;
+        #        margin: 0px;
+        #        outline: none;
+        #        background: transparent;
+        #    }
+        #    QGraphicsView:focus {
+        #        border: 0px;
+        #        outline: none;
+        #    }
+        #""")
         
         # Подключаем сигналы сцены
         self.scene.nodeDoubleClicked.connect(self.open_node_editor)
@@ -500,59 +517,204 @@ class MainWindow(QMainWindow):
             self.save_data()
     
     def toggle_theme(self):
-        """Переключение темы"""
+        """Переключение темы - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
         self.dark_mode = not self.dark_mode
-        
+    
+        # Получаем текущее приложение
+        app = QApplication.instance()
+    
         if self.dark_mode:
-            # Темная тема
-            palette = QPalette()
-            palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
-            palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
-            palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
-            palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
-            palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.black)
-            palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
-            palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
-            palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
-            palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
-            palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-            palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-            palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
-            palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-            QApplication.setPalette(palette)
-
-            # Создаем текстуру для темной сетки
-            dark_texture = QPixmap(20, 20)
-            dark_texture.fill(QColor(45, 45, 45))  # Темный фон
+            # ТЕМНАЯ ТЕМА
+            # Устанавливаем темную палитру
+            dark_palette = QPalette()
         
-            painter = QPainter(dark_texture)
-            painter.setPen(QColor(70, 70, 70))  # Цвет сетки (темно-серый)
-            # Рисуем точки на углах
-            painter.drawPoint(0, 0)
-            painter.drawPoint(10, 0)
-            painter.drawPoint(0, 10)
-            painter.drawPoint(10, 10)
-            painter.end()
+            # Базовые цвета
+            dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+            dark_palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+            dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
+            dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+            dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+            dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+            dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+            dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
         
-            self.scene.setBackgroundBrush(QBrush(dark_texture))
+            # Устанавливаем палитру
+            app.setPalette(dark_palette)
+        
+            # Устанавливаем стиль для темной темы
+            app.setStyleSheet("""
+                /* Стиль для всех меню в темной теме */
+                QMenu {
+                    background-color: #353535;
+                    border: 1px solid #555555;
+                    color: #ffffff;
+                    padding: 4px;
+                }
+            
+                QMenu::item {
+                    background-color: transparent;
+                    padding: 6px 24px 6px 8px;
+                    margin: 2px 4px;
+                    border-radius: 3px;
+                }
+            
+                QMenu::item:selected {
+                    background-color: #2a82da;
+                    color: #ffffff;
+                }
+            
+                QMenu::item:disabled {
+                    color: #777777;
+                }
+            
+                QMenu::separator {
+                    height: 1px;
+                    background-color: #555555;
+                    margin: 4px 8px;
+                }
+            
+                /* Стиль для панели инструментов в темной теме */
+                QToolBar {
+                    background-color: #2b2b2b;
+                    border: none;
+                    spacing: 3px;
+                    padding: 2px;
+                }
+            
+                QToolBar QToolButton {
+                    background-color: transparent;
+                    border: 1px solid transparent;
+                    border-radius: 3px;
+                    padding: 4px;
+                    color: #ffffff;
+                }
+            
+                QToolBar QToolButton:hover {
+                    background-color: #404040;
+                    border: 1px solid #505050;
+                }
+            
+                QToolBar QToolButton:pressed {
+                    background-color: #505050;
+                }
+            
+                /* Стиль для статусбара */
+                QStatusBar {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                }
+            
+                /* Стиль для QGraphicsView */
+                QGraphicsView {
+                    border: 0px;
+                    outline: 0px;
+                    background: transparent;
+                }
+            
+                QGraphicsView::rubberBand {
+                    border: 2px dashed #2196F3;
+                    background-color: rgba(33, 150, 243, 30);
+                }
+            """)
+        
+            # Фон сцены для темной темы
+            self.scene.setBackgroundBrush(QColor(45, 45, 45))
             self.theme_action.setText("☀️ Светлая тема")
+        
         else:
-            # Светлая тема
-            QApplication.setPalette(QApplication.style().standardPalette())
-            # Светлая сетка
-            light_texture = QPixmap(20, 20)
-            light_texture.fill(QColor(250, 250, 250))
+            # СВЕТЛАЯ ТЕМА
+            # Восстанавливаем стандартную палитру Fusion
+            app.setPalette(app.style().standardPalette())
         
-            painter = QPainter(light_texture)
-            painter.setPen(QColor(230, 230, 230))  # Светло-серый
-            painter.drawPoint(0, 0)
-            painter.drawPoint(10, 0)
-            painter.drawPoint(0, 10)
-            painter.drawPoint(10, 10)
-            painter.end()
+            # Устанавливаем стиль для светлой темы
+            app.setStyleSheet("""
+                /* Стиль для всех меню в светлой теме */
+                QMenu {
+                    background-color: #ffffff;
+                    border: 1px solid #cccccc;
+                    color: #333333;
+                    padding: 4px;
+                }
+            
+                QMenu::item {
+                    background-color: transparent;
+                    padding: 6px 24px 6px 8px;
+                    margin: 2px 4px;
+                    border-radius: 3px;
+                }
+            
+                QMenu::item:selected {
+                    background-color: #e0e0e0;
+                    color: #000000;
+                }
+            
+                QMenu::item:disabled {
+                    color: #999999;
+                }
+            
+                QMenu::separator {
+                    height: 1px;
+                    background-color: #dddddd;
+                    margin: 4px 8px;
+                }
+            
+                /* Стиль для панели инструментов в светлой теме */
+                QToolBar {
+                    background-color: #f0f0f0;
+                    border: none;
+                    spacing: 3px;
+                    padding: 2px;
+                }
+            
+                QToolBar QToolButton {
+                    background-color: transparent;
+                    border: 1px solid transparent;
+                    border-radius: 3px;
+                    padding: 4px;
+                    color: #333333;
+                }
+            
+                QToolBar QToolButton:hover {
+                    background-color: #e0e0e0;
+                    border: 1px solid #d0d0d0;
+                }
+            
+                QToolBar QToolButton:pressed {
+                    background-color: #d0d0d0;
+                }
+            
+                /* Стиль для статусбара */
+                QStatusBar {
+                    background-color: #f0f0f0;
+                    color: #333333;
+                }
+            
+                /* Стиль для QGraphicsView */
+                QGraphicsView {
+                    border: 0px;
+                    outline: 0px;
+                    background: transparent;
+                }
+            
+                QGraphicsView::rubberBand {
+                    border: 2px dashed #2196F3;
+                    background-color: rgba(33, 150, 243, 30);
+                }
+            """)
         
-            self.scene.setBackgroundBrush(QBrush(light_texture))
+            # Фон сцены для светлой темы
+            self.scene.setBackgroundBrush(QColor(245, 245, 245))
             self.theme_action.setText("🌙 Темная тема")
+    
+        # Обновляем все виджеты
+        app.processEvents()
+        self.update()
+        
     
     def closeEvent(self, event):
         """Обработка закрытия окна"""

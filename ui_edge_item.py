@@ -13,7 +13,7 @@
 """
 Графический элемент связи между узлами
 """
-from PyQt6.QtWidgets import QGraphicsObject, QGraphicsItem, QMenu
+from PyQt6.QtWidgets import QGraphicsObject, QGraphicsItem, QMenu, QStyle
 from PyQt6.QtCore import Qt, QPointF, pyqtSignal, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath, QPen, QColor, QAction, QBrush, QTransform 
 
@@ -90,14 +90,27 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
     def boundingRect(self):
         """Возвращает ограничивающий прямоугольник для связи"""
         # Добавляем отступ для стрелки и выделения
-        padding = 20
+        padding = 3
         rect = self._path.boundingRect()
         return rect.adjusted(-padding, -padding, padding, padding)
 
     def paint(self, painter, option, widget=None):
         """Кастомная отрисовка"""
+        
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
+        # ⛔ Отключаем стандартное выделение Qt (ВАЖНО)
+        option.state &= ~QStyle.StateFlag.State_Selected
+        option.state &= ~QStyle.StateFlag.State_HasFocus
+    
+        # ВАЖНОЕ ДОБАВЛЕНИЕ: Сначала рисуем прозрачный boundingRect
+        # Это затирает возможные артефакты Qt
+        painter.save()
+        painter.setBrush(QBrush(Qt.GlobalColor.transparent))
+        painter.setPen(QPen(Qt.GlobalColor.transparent))
+        painter.drawRect(self.boundingRect())
+        painter.restore()
+        
         # Настройка пера
         pen = QPen(self.color, 2)
 
@@ -165,15 +178,15 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
         #menu.addAction(delete_action)
         #menu.exec(event.screenPos())
 
-    def hoverEnterEvent(self, event):
-        """Обработка наведения курсора"""
-        self.setZValue(100)  # Поднимаем над другими элементами
-        pen = QPen(self.color, 4)  # Толще при наведении
-        self.update()
-        super().hoverEnterEvent(event)
+    #def hoverEnterEvent(self, event):
+        #"""Обработка наведения курсора"""
+        #self.setZValue(100)  # Поднимаем над другими элементами
+        #pen = QPen(self.color, 4)  # Толще при наведении
+        #self.update()
+        #super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event):
-        """Обработка выхода курсора"""
-        self.setZValue(0)
-        self.update()
-        super().hoverLeaveEvent(event)
+    #def hoverLeaveEvent(self, event):
+        #"""Обработка выхода курсора"""
+        #self.setZValue(0)
+        #self.update()
+        #super().hoverLeaveEvent(event)

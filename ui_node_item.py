@@ -15,7 +15,7 @@
 """
 from PyQt6.QtWidgets import (
     QGraphicsObject, QGraphicsTextItem, QGraphicsItem, 
-    QMenu, QInputDialog, QColorDialog
+    QMenu, QInputDialog, QColorDialog, QStyle
 )
 from PyQt6.QtCore import Qt, QRectF, QPointF, pyqtSignal, QRect
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QBrush, QPen, QFont, QAction
@@ -170,6 +170,9 @@ class NodeItem(QGraphicsObject):
     def paint(self, painter, option, widget=None):
         """Кастомная отрисовка"""
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # ⛔ Отключаем стандартное выделение Qt (ВАЖНО)
+        option.state &= ~QStyle.StateFlag.State_Selected
+        option.state &= ~QStyle.StateFlag.State_HasFocus
         
         # Определяем цвета
         brush_color = self.color
@@ -224,3 +227,15 @@ class NodeItem(QGraphicsObject):
             indicator_path.closeSubpath()
             painter.drawPath(indicator_path)
             painter.restore()
+
+    def shape(self):
+        path = QPainterPath()
+        path.addRoundedRect(
+            0,
+            0,
+            self.width,
+            self.height,
+            self.corner_radius,
+            self.corner_radius
+        )
+        return path

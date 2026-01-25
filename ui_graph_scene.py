@@ -13,7 +13,7 @@
 """
 Графическая сцена для отображения карты
 """
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QMenu
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QMenu, QFrame
 from PyQt6.QtCore import Qt, QPointF, pyqtSignal
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QAction
 
@@ -39,7 +39,7 @@ class GraphScene(QGraphicsScene):
         super().__init__(parent)
         
         # Настройки сцены
-        self.setBackgroundBrush(QBrush(QColor(240, 240, 240)))
+        self.setBackgroundBrush(QBrush(QColor(245, 245, 245)))
         
         # Словари для хранения элементов
         self.nodes = {}  # node_id -> NodeItem
@@ -49,6 +49,9 @@ class GraphScene(QGraphicsScene):
         # Состояние
         self.dragging = False
         self.drag_start = QPointF()
+
+        # Отключаем индексирование для производительности (может вызывать артефакты)
+        self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
         
         # Контекстное меню
         self.setup_context_menu()
@@ -225,29 +228,39 @@ class GraphScene(QGraphicsScene):
         super().mouseReleaseEvent(event)
     
     def drawBackground(self, painter, rect):
-        """Отрисовка фона с сеткой"""
+        """Отрисовка фона с сеткой - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+        # ВАЖНО: сначала вызываем родительский метод для очистки
         super().drawBackground(painter, rect)
         
-        # Рисуем сетку
-        painter.setPen(QPen(QColor(220, 220, 220), 1))
+        # Рисуем сетку ТОЛЬКО если нужно
+        painter.save()
         
+        # Устанавливаем перо для сетки
+        grid_pen = QPen(QColor(230, 230, 230), 1)  # Светло-серая сетка
+        grid_pen.setCosmetic(True)  # Важно: косметическое перо (не зависит от масштаба)
+        painter.setPen(grid_pen)
+        
+        # Используем целочисленные координаты для избежания артефактов
         grid_size = 50
         left = int(rect.left()) - (int(rect.left()) % grid_size)
         top = int(rect.top()) - (int(rect.top()) % grid_size)
         right = int(rect.right())
         bottom = int(rect.bottom())
         
+        # Рисуем сетку ТОЛЬКО в видимой области
         # Вертикальные линии
         x = left
-        while x < right:
+        while x <= right:
             painter.drawLine(x, top, x, bottom)
             x += grid_size
         
         # Горизонтальные линии
         y = top
-        while y < bottom:
+        while y <= bottom:
             painter.drawLine(left, y, right, y)
             y += grid_size
+        
+        painter.restore()
 
     def remove_all_references_to_node(self, node_id: int):
         """Удалить все ссылки на узел из сцены"""
@@ -286,22 +299,41 @@ class GraphView(QGraphicsView):
         self.scene = scene
         
         # Настройки вида
-        self.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        self.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        
+        self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        self.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        # Устанавливаем RubberBandDrag
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-        self.setOptimizationFlag(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing)
-        
+        # Отключаем оптимизации, которые могут вызывать артефакты
+        self.setOptimizationFlag(QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing, True)
+        self.setOptimizationFlag(QGraphicsView.OptimizationFlag.DontSavePainterState, True)
         # Настройки прокрутки
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         
+        # Убираем рамку у view
+        self.setFrameShape(QFrame.Shape.NoFrame)  # ← Вместо 0 QFrame.Shape.NoFrame
+        
+        # Устанавливаем стиль для rubber band (выделения области)
+        #self.setStyleSheet("""
+            #QGraphicsView {
+                #border: 0px;
+                #background: transparent;
+            #}
+            #QGraphicsView::rubberBand {
+                #border: 2px dashed #2196F3;
+                #background-color: rgba(33, 150, 243, 30);
+            #}
+        #""")
+
         # Масштабирование
         self.zoom_factor = 1.0
         self.zoom_step = 0.1
         self.min_zoom = 0.1
         self.max_zoom = 5.0
+
+        # Устанавливаем режим обновления для избежания артефактов
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
     
     def wheelEvent(self, event):
         """Обработка колесика мыши для масштабирования"""
