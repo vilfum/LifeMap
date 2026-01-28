@@ -146,8 +146,13 @@ class NodeItem(QGraphicsObject):
             None, "Новый узел", "Введите название узла:"
         )
         if ok and text:
+            vertical_gap = 120  # расстояние между узлами
             # Сигнал будет обработан в главном окне
-            self.addChildRequested.emit(self.node_id, text, self.x() + 250, self.y())
+            self.addChildRequested.emit(self.node_id, 
+                                        text, 
+                                        self.x(), 
+                                        self.y() + self.height + vertical_gap
+                                        )
     
     def _change_color(self):
         """Изменение цвета узла"""

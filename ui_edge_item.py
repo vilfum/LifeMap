@@ -59,24 +59,26 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
         from_rect = self.from_item.boundingRect()
         from_pos = self.from_item.pos()
         start = QPointF(
-            from_pos.x() + from_rect.width(),
-            from_pos.y() + from_rect.height() / 2
+            from_pos.x() + from_rect.width() / 2,
+            from_pos.y() + from_rect.height()
         )
 
         # Конечная точка (центр левой стороны to_item)
         to_rect = self.to_item.boundingRect()
         to_pos = self.to_item.pos()
         end = QPointF(
-            to_pos.x(),
-            to_pos.y() + to_rect.height() / 2
+            to_pos.x() + to_rect.width() / 2,
+            to_pos.y()
         )
 
         # Создаем плавную кривую Безье
         path.moveTo(start)
 
+        offset = abs(end.y() - start.y()) / 2
+
         # Контрольные точки для плавности
-        ctrl1 = QPointF(start.x() + 50, start.y())
-        ctrl2 = QPointF(end.x() - 50, end.y())
+        ctrl1 = QPointF(start.x(), start.y() + offset)
+        ctrl2 = QPointF(end.x(), end.y() - offset)
 
         path.cubicTo(ctrl1, ctrl2, end)
 
@@ -142,29 +144,58 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
             painter.setBrush(pen.color())
 
             # Получаем конечную точку и направление
-            percent = 0.99  # Положение стрелки (99% от длины)
-            point = self._path.pointAtPercent(percent)
-            angle = self._path.angleAtPercent(percent)
+            #percent = 0.99  # Положение стрелки (99% от длины)
+            #point = self._path.pointAtPercent(percent)
+            #angle = self._path.angleAtPercent(percent)
 
             # Рисуем стрелку
-            arrow_size = 10
+            #arrow_size = 10
             # Используем QTransform для поворота
+            #transform = QTransform()
+            #transform.translate(point.x(), point.y())
+            #transform.rotate(angle + 150)
+            #arrow_p1 = transform.map(QPointF(arrow_size * 0.8, 0))
+    
+            #transform = QTransform()
+            #transform.translate(point.x(), point.y())
+            #transform.rotate(angle - 150)
+            #arrow_p2 = transform.map(QPointF(arrow_size * 0.8, 0))
+    
+            #arrow_path = QPainterPath()
+            #arrow_path.moveTo(point)
+            #arrow_path.lineTo(arrow_p1)
+            #arrow_path.lineTo(arrow_p2)
+            #arrow_path.closeSubpath()
+    
+            #painter.drawPath(arrow_path)
+            #painter.restore()
+
+            #percent = 0.99
+            point = self._path.pointAtPercent(1.0)
+
+            arrow_offset = 1
+            point = QPointF(point.x(), point.y() - arrow_offset)
+
+            angle = -90  # ВНИЗ
+
+            arrow_size = 10
+
             transform = QTransform()
             transform.translate(point.x(), point.y())
-            transform.rotate(angle + 150)
+            transform.rotate(-(angle + 150))
             arrow_p1 = transform.map(QPointF(arrow_size * 0.8, 0))
-    
+
             transform = QTransform()
             transform.translate(point.x(), point.y())
-            transform.rotate(angle - 150)
+            transform.rotate(-(angle - 150))
             arrow_p2 = transform.map(QPointF(arrow_size * 0.8, 0))
-    
+
             arrow_path = QPainterPath()
             arrow_path.moveTo(point)
             arrow_path.lineTo(arrow_p1)
             arrow_path.lineTo(arrow_p2)
             arrow_path.closeSubpath()
-    
+
             painter.drawPath(arrow_path)
             painter.restore()
 
