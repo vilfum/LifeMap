@@ -55,7 +55,7 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
         """Обновление пути связи"""
         path = QPainterPath()
 
-        # Начальная точка (центр правой стороны from_item)
+        # Начальная точка (центр нижней стороны from_item)
         from_rect = self.from_item.boundingRect()
         from_pos = self.from_item.pos()
         start = QPointF(
@@ -63,7 +63,7 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
             from_pos.y() + from_rect.height()
         )
 
-        # Конечная точка (центр левой стороны to_item)
+        # Конечная точка (центр верхней стороны to_item)
         to_rect = self.to_item.boundingRect()
         to_pos = self.to_item.pos()
         end = QPointF(

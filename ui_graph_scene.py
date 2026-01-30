@@ -14,7 +14,7 @@
 Графическая сцена для отображения карты
 """
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QMenu, QFrame
-from PyQt6.QtCore import Qt, QPointF, pyqtSignal
+from PyQt6.QtCore import Qt, QPointF, pyqtSignal, QPoint
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QAction
 
 from ui_node_item import NodeItem
@@ -47,8 +47,8 @@ class GraphScene(QGraphicsScene):
         self.node_edges = {}
         
         # Состояние
-        self.dragging = False
-        self.drag_start = QPointF()
+        #self.dragging = False
+        #self.drag_start = QPointF()
 
         # Отключаем индексирование для производительности (может вызывать артефакты)
         self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
@@ -189,43 +189,43 @@ class GraphScene(QGraphicsScene):
                 return item
         return None
     
-    def mousePressEvent(self, event):
-        """Обработка нажатия мыши"""
-        if event.button() == Qt.MouseButton.RightButton:
+    #def mousePressEvent(self, event):
+        #"""Обработка нажатия мыши"""
+        #if event.button() == Qt.MouseButton.RightButton:
             # Если клик по пустому месту
-            item = self.get_node_at(event.scenePos())
-            if not item:
-                self.dragging = True
-                self.drag_start = event.scenePos()
-                event.accept()
-                return
+            #item = self.get_node_at(event.scenePos())
+            #if not item:
+                #self.dragging = True
+                #self.drag_start = event.scenePos()
+                #event.accept()
+                #return
         
-        super().mousePressEvent(event)
+        #super().mousePressEvent(event)
     
-    def mouseMoveEvent(self, event):
-        """Обработка перемещения мыши"""
-        if self.dragging:
+    #def mouseMoveEvent(self, event):
+        #"""Обработка перемещения мыши"""
+        #if self.dragging:
             # Перетаскивание всей сцены
-            delta = event.scenePos() - self.drag_start
-            self.drag_start = event.scenePos()
+            #delta = event.scenePos() - self.drag_start
+            #self.drag_start = event.scenePos()
             
             # Перемещаем все видимые элементы
-            for item in self.items():
-                if isinstance(item, (NodeItem, EdgeItem)):
-                    item.setPos(item.pos() + delta)
+            #for item in self.items():
+                #if isinstance(item, (NodeItem, EdgeItem)):
+                    #item.setPos(item.pos() + delta)
             
-            event.accept()
-        else:
-            super().mouseMoveEvent(event)
+            #event.accept()
+        #else:
+            #super().mouseMoveEvent(event)
     
-    def mouseReleaseEvent(self, event):
-        """Обработка отпускания мыши"""
-        if self.dragging and event.button() == Qt.MouseButton.RightButton:
-            self.dragging = False
-            event.accept()
-            return
+    #def mouseReleaseEvent(self, event):
+        #"""Обработка отпускания мыши"""
+        #if self.dragging and event.button() == Qt.MouseButton.RightButton:
+            #self.dragging = False
+            #event.accept()
+            #return
         
-        super().mouseReleaseEvent(event)
+        #super().mouseReleaseEvent(event)
     
     def drawBackground(self, painter, rect):
         """Отрисовка фона с сеткой - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
@@ -297,6 +297,10 @@ class GraphView(QGraphicsView):
         super().__init__(scene, parent)
         
         self.scene = scene
+
+        #Состояние
+        self.panning = False
+        self.pan_start = QPoint()
         
         # Настройки вида
         self.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -334,6 +338,45 @@ class GraphView(QGraphicsView):
 
         # Устанавливаем режим обновления для избежания артефактов
         self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+
+    def mousePressEvent(self, event):
+        """Обработка нажатия мыши"""
+        if event.button() == Qt.MouseButton.RightButton:
+            self.panning = True
+            self.pan_start = event.pos()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            event.accept()
+            return
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Обработка перемещения мыши"""
+        if self.panning:
+            delta = event.pos() - self.pan_start
+            self.pan_start = event.pos()
+
+            self.horizontalScrollBar().setValue(
+                self.horizontalScrollBar().value() - delta.x()
+            )
+            self.verticalScrollBar().setValue(
+                self.verticalScrollBar().value() - delta.y()
+            )
+
+            event.accept()
+            return
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Обработка отпускания мыши"""
+        if event.button() == Qt.MouseButton.RightButton and self.panning:
+            self.panning = False
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            event.accept()
+            return
+
+        super().mouseReleaseEvent(event)
     
     def wheelEvent(self, event):
         """Обработка колесика мыши для масштабирования"""
