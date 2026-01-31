@@ -123,28 +123,62 @@ class FileAttachment:
 @dataclass
 class NodeContent:
     """Содержимое узла"""
-    node_id: int
-    html_content: str = ""
-    text_content: str = ""
-    created_at: datetime = field(default_factory=datetime.now)
-    updated_at: datetime = field(default_factory=datetime.now)
+    #node_id: int
+    #html_content: str = ""
+    #text_content: str = ""
+    #created_at: datetime = field(default_factory=datetime.now)
+    #updated_at: datetime = field(default_factory=datetime.now)
     
     # Коллекции
-    todo_lists: List[TodoList] = field(default_factory=list)
-    dates: List[DateItem] = field(default_factory=list)
-    attachments: List[FileAttachment] = field(default_factory=list)
+    #todo_lists: List[TodoList] = field(default_factory=list)
+    #dates: List[DateItem] = field(default_factory=list)
+    #attachments: List[FileAttachment] = field(default_factory=list)
     
-    def to_dict(self):
-        return {
-            'node_id': self.node_id,
-            'html_content': self.html_content,
-            'text_content': self.text_content,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat(),
-            'todo_lists': [todo.to_dict() for todo in self.todo_lists],
-            'dates': [date.to_dict() for date in self.dates],
-            'attachments': [att.to_dict() for att in self.attachments]
-        }
+    #def to_dict(self):
+    #    return {
+    #        'node_id': self.node_id,
+    #        'html_content': self.html_content,
+    #        'text_content': self.text_content,
+    #        'created_at': self.created_at.isoformat(),
+    #        'updated_at': self.updated_at.isoformat(),
+    #        'todo_lists': [todo.to_dict() for todo in self.todo_lists],
+    #        'dates': [date.to_dict() for date in self.dates],
+    #        'attachments': [att.to_dict() for att in self.attachments]
+    #    }
+    node_id: int
+    tabs: list[ContentTab] = field(default_factory=list)
+
+    def add_tab(self, tab_type: ContentTabType, title: str | None = None) -> ContentTab:
+        new_id = max((t.tab_id for t in self.tabs), default=0) + 1
+
+        if title is None:
+            title = tab_type.value.capitalize()
+
+        tab = ContentTab(
+            tab_id=new_id,
+            tab_type=tab_type,
+            title=title,
+            data={}
+        )
+
+        self.tabs.append(tab)
+        return tab
+    
+    def remove_tab(self, tab_id: int):
+        self.tabs = [t for t in self.tabs if t.tab_id != tab_id]
+
+    def get_tab(self, tab_id: int) -> ContentTab | None:
+        for tab in self.tabs:
+            if tab.tab_id == tab_id:
+                return tab
+        return None
+    
+    def move_tab(self, tab_id: int, new_index: int):
+        tab = self.get_tab(tab_id)
+        if not tab:
+            return
+        self.tabs.remove(tab)
+        self.tabs.insert(new_index, tab)
 
 
 @dataclass
@@ -199,3 +233,17 @@ class Edge:
             'line_type': self.line_type.value,
             'color': self.color
         }
+
+class ContentTabType(Enum):
+    TEXT = "text"
+    FILES = "files"
+    LIST = "list"
+    TODO = "todo"
+    DATES = "dates"
+
+@dataclass
+class ContentTab:
+    tab_id: int
+    tab_type: ContentTabType
+    title: str
+    data: Any = field(default_factory=dict)

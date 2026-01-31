@@ -28,7 +28,7 @@ from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap,
 
 from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
-from models import Node, Edge, LineType
+from models import Node, Edge, LineType, NodeContent
 
 
 class PasswordDialog(QDialog):
@@ -481,7 +481,12 @@ class MainWindow(QMainWindow):
     def open_node_editor(self, node_id: int):
         """Открытие редактора узла"""
         from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QTabWidget
-        
+        node = self.db_session.get_node(node_id)
+
+        if node.content is None:
+            node.content = NodeContent(node_id=node.id)
+            #self.db_session.save(node)  
+
         dialog = QDialog(self)
         dialog.setWindowTitle(f"Редактор узла")
         dialog.setMinimumSize(800, 600)
