@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QToolBar, QStatusBar, QMessageBox, QInputDialog,
     QApplication, QSplitter, QFileDialog, QDialog, QLabel,
-    QLineEdit, QPushButton, QCheckBox
+    QLineEdit, QPushButton, QCheckBox, QTabWidget, QMenu
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QPointF, QRectF
 from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap, QPainter, QBrush
@@ -485,9 +485,9 @@ class MainWindow(QMainWindow):
 
         if node.content is None:
             node.content = NodeContent(node_id=node.id)
-            #self.db_session.save(node)  
+            self.db_session.conn.commit()
 
-        dialog = QDialog(self)
+        dialog = NodeContentEditorDialog(node, self)
         dialog.setWindowTitle(f"Редактор узла")
         dialog.setMinimumSize(800, 600)
         
@@ -747,3 +747,51 @@ class MainWindow(QMainWindow):
             
         except Exception as e:
             print(f"Ошибка при создании дочернего узла: {e}")
+
+class NodeContentEditorDialog(QDialog):
+    def __init__(self, node, parent=None):
+        super().__init__(parent)
+        self.node = node
+        self.setWindowTitle("Содержимое узла")
+        self.resize(800, 600)
+
+        self._build_ui()
+
+    def _build_ui(self):
+        # Основной layout
+        main_layout = QVBoxLayout(self)
+        # Шапка содержимого узла
+        header_layout = QHBoxLayout()
+        self.title_label = QLabel(self.node.title)
+        self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+
+        self.edit_title_button = QPushButton("✏️")
+        self.edit_title_button.setFixedSize(28, 28)
+        self.edit_title_button.setToolTip("Изменить название узла")
+
+        header_layout.addWidget(self.title_label)
+        header_layout.addStretch()
+        header_layout.addWidget(self.edit_title_button)
+
+        main_layout.addLayout(header_layout)
+        # Вкладки содержимого
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(False)
+
+        main_layout.addWidget(self.tabs)
+        # Кнопка добавления вкладки
+        self.add_tab_button = QPushButton("+")
+        self.add_tab_button.setFixedSize(28, 28)
+        self.add_tab_button.setToolTip("Добавить вкладку")
+
+        self.tabs.setCornerWidget(self.add_tab_button, Qt.Corner.TopRightCorner)
+        # Меню добавления вкладки
+        self.add_tab_menu = QMenu(self)
+
+        self.add_tab_menu.addAction("Текст")
+        self.add_tab_menu.addAction("Файлы")
+        self.add_tab_menu.addAction("Список")
+        self.add_tab_menu.addAction("Список дел")
+        self.add_tab_menu.addAction("Даты")
+
+        self.add_tab_button.setMenu(self.add_tab_menu)
