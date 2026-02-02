@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import QGraphicsObject, QGraphicsItem, QMenu, QStyle
 from PyQt6.QtCore import Qt, QPointF, pyqtSignal, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath, QPen, QColor, QAction, QBrush, QTransform 
 
+#from .ui_node_item import NodeItem
 from models import LineType
 
 
@@ -26,7 +27,7 @@ class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject
     # Сигналы
     #deleted = pyqtSignal(int)  # ID связи
 
-    def __init__(self, edge_id: int, from_item: 'NodeItem', to_item: 'NodeItem',
+    def __init__(self, edge_id: int, from_item: 'NodeItem', to_item: 'NodeItem', # type: ignore
                  line_type: LineType = LineType.SOLID, color: str = "#000000"):
         super().__init__()  # ← ТОЛЬКО ОДИН super().__init__()
 

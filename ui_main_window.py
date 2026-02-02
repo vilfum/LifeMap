@@ -15,20 +15,20 @@
 """
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QToolBar, QStatusBar, QMessageBox, QInputDialog,
     QApplication, QSplitter, QFileDialog, QDialog, QLabel,
-    QLineEdit, QPushButton, QCheckBox, QTabWidget, QMenu
+    QLineEdit, QPushButton, QCheckBox, QTabWidget, QMenu, QTextEdit, QListWidget
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QPointF, QRectF
 from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap, QPainter, QBrush
 
 from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
-from models import Node, Edge, LineType, NodeContent
+from models import Node, Edge, LineType, NodeContent, ContentTabType
 
 
 class PasswordDialog(QDialog):
@@ -755,39 +755,30 @@ class NodeContentEditorDialog(QDialog):
         self.setWindowTitle("Содержимое узла")
         self.resize(800, 600)
 
-        self._build_ui()
+        # ====== ВИДЖЕТЫ ======
 
-    def _build_ui(self):
-        # Основной layout
-        main_layout = QVBoxLayout(self)
-        # Шапка содержимого узла
-        header_layout = QHBoxLayout()
+        # Название
         self.title_label = QLabel(self.node.title)
         self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+
+        self.title_edit = QLineEdit(self.node.title)
+        self.title_edit.setVisible(False)
+        self.title_edit.setStyleSheet("font-size: 18px;")
 
         self.edit_title_button = QPushButton("✏️")
         self.edit_title_button.setFixedSize(28, 28)
         self.edit_title_button.setToolTip("Изменить название узла")
 
-        header_layout.addWidget(self.title_label)
-        header_layout.addStretch()
-        header_layout.addWidget(self.edit_title_button)
-
-        main_layout.addLayout(header_layout)
-        # Вкладки содержимого
+        # Вкладки
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(False)
 
-        main_layout.addWidget(self.tabs)
         # Кнопка добавления вкладки
         self.add_tab_button = QPushButton("+")
         self.add_tab_button.setFixedSize(28, 28)
         self.add_tab_button.setToolTip("Добавить вкладку")
 
-        self.tabs.setCornerWidget(self.add_tab_button, Qt.Corner.TopRightCorner)
-        # Меню добавления вкладки
         self.add_tab_menu = QMenu(self)
-
         self.add_tab_menu.addAction("Текст")
         self.add_tab_menu.addAction("Файлы")
         self.add_tab_menu.addAction("Список")
@@ -795,3 +786,108 @@ class NodeContentEditorDialog(QDialog):
         self.add_tab_menu.addAction("Даты")
 
         self.add_tab_button.setMenu(self.add_tab_menu)
+
+        # ====== СБОРКА UI ======
+        self._build_ui()
+
+        # ====== СИГНАЛЫ ======
+        self.edit_title_button.clicked.connect(self.start_title_edit)
+        self.title_edit.editingFinished.connect(self.finish_title_edit)
+        
+        # Обработчики для меню добавления вкладок
+        self.add_tab_menu.triggered.connect(self.add_tab)
+
+    def _build_ui(self):
+        main_layout = QVBoxLayout(self)
+
+        # --- Шапка ---
+        header_layout = QHBoxLayout()
+
+        title_container = QWidget()
+        title_layout = QHBoxLayout(title_container)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+
+        title_layout.addWidget(self.title_label)
+        title_layout.addWidget(self.title_edit)
+        title_layout.addWidget(self.edit_title_button)
+
+        header_layout.addWidget(title_container)
+        header_layout.addStretch()
+
+        main_layout.addLayout(header_layout)
+
+        # --- Панель вкладок + кнопка ---
+        tabs_header = QHBoxLayout()
+        tabs_header.addStretch()
+        tabs_header.addWidget(self.add_tab_button)
+
+        main_layout.addLayout(tabs_header)
+        main_layout.addWidget(self.tabs)
+
+    # ====== ЛОГИКА ======
+
+    def start_title_edit(self):
+        self.title_label.setVisible(False)
+        self.title_edit.setVisible(True)
+        self.title_edit.setFocus()
+        self.title_edit.selectAll()
+
+    def finish_title_edit(self):
+        new_title = self.title_edit.text().strip()
+        if new_title and new_title != self.node.title:
+            self.node.title = new_title
+            self.title_label.setText(new_title)
+
+            # --- СОХРАНЕНИЕ В БД ---
+            try:
+                parent = cast(MainWindow, self.parent())
+                parent.db_session.update_node_title(self.node.id, new_title)
+                
+                # Обновляем название в сцене
+                node_item = parent.scene.nodes.get(self.node.id)
+                if node_item:
+                    node_item.title = new_title
+                    node_item.update_appearance()
+                    
+            except Exception as e:
+                print("Ошибка сохранения названия узла:", e)
+
+        self.title_edit.setVisible(False)
+        self.title_label.setVisible(True)
+
+    def add_tab(self, action):
+        """Добавление новой вкладки"""
+        tab_type_text = action.text()
+        
+        # Определяем тип вкладки
+        if tab_type_text == "Текст":
+            tab_type = ContentTabType.TEXT
+        elif tab_type_text == "Файлы":
+            tab_type = ContentTabType.FILES
+        elif tab_type_text == "Список":
+            tab_type = ContentTabType.LIST
+        elif tab_type_text == "Список дел":
+            tab_type = ContentTabType.TODO
+        elif tab_type_text == "Даты":
+            tab_type = ContentTabType.DATES
+        else:
+            return
+        
+        # Добавляем вкладку в модель
+        new_tab = self.node.content.add_tab(tab_type)
+        
+        # Создаем виджет для вкладки
+        if tab_type == ContentTabType.TEXT:
+            widget = QTextEdit()
+            widget.setPlainText("Новая текстовая вкладка")
+        elif tab_type == ContentTabType.FILES:
+            widget = QLabel("Функционал прикрепления файлов будет добавлен")
+        elif tab_type == ContentTabType.LIST:
+            widget = QListWidget()
+        elif tab_type == ContentTabType.TODO:
+            widget = QLabel("Функционал списка дел будет добавлен")
+        elif tab_type == ContentTabType.DATES:
+            widget = QLabel("Функционал дат будет добавлен")
+        
+        # Добавляем вкладку в UI
+        self.tabs.addTab(widget, new_tab.title)
