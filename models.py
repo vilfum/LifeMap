@@ -179,6 +179,23 @@ class NodeContent:
             return
         self.tabs.remove(tab)
         self.tabs.insert(new_index, tab)
+        
+    def reorder_tabs(self, tab_ids: list[int]):
+        """Переупорядочивает вкладки по заданному списку ID"""
+        new_tabs = []
+        for tab_id in tab_ids:
+            tab = self.get_tab(tab_id)
+            if tab:
+                new_tabs.append(tab)
+        self.tabs = new_tabs
+    
+    def to_dict(self):
+        return {
+            'tabs': [tab.to_dict() for tab in self.tabs]
+        }
+    
+    def save(self, db_session):
+        db_session.save_node_content(self)
 
 
 @dataclass
@@ -247,3 +264,11 @@ class ContentTab:
     tab_type: ContentTabType
     title: str
     data: Any = field(default_factory=dict)
+    
+    def to_dict(self):
+        return {
+            'tab_id': self.tab_id,
+            'tab_type': self.tab_type.value,
+            'title': self.title,
+            'data': self.data
+        }

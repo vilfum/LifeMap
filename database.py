@@ -124,10 +124,7 @@ class EncryptedSQLite:
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS node_content (
                 node_id INTEGER PRIMARY KEY,
-                html_content TEXT DEFAULT '',
-                text_content TEXT DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                content TEXT DEFAULT '{}',
                 FOREIGN KEY (node_id) REFERENCES nodes (id) ON DELETE CASCADE
             )
         """)
@@ -191,6 +188,12 @@ class EncryptedSQLite:
                 value TEXT NOT NULL
             )
         """)
+        
+        # Миграция таблицы node_content
+        self.cursor.execute("PRAGMA table_info(node_content)")
+        columns = [row[1] for row in self.cursor.fetchall()]
+        if 'content' not in columns:
+            self.cursor.execute("ALTER TABLE node_content ADD COLUMN content TEXT DEFAULT '{}'")
         
         self.conn.commit()
     
@@ -344,7 +347,7 @@ class EncryptedSQLite:
     
     def _row_to_node(self, row) -> Node:
         """Преобразование строки БД в объект Node"""
-        return Node(
+        node = Node(
             id=row['id'],
             title=row['title'],
             parent_id=row['parent_id'],
@@ -355,6 +358,8 @@ class EncryptedSQLite:
             created_at=datetime.fromisoformat(row['created_at']) 
             if isinstance(row['created_at'], str) else row['created_at']
         )
+        node.content = self.load_node_content(node.id)
+        return node
     
     def _row_to_edge(self, row) -> Edge:
         """Преобразование строки БД в объект Edge"""
@@ -429,6 +434,35 @@ class EncryptedSQLite:
                 stack.append(child['id'])
     
         return descendants
+    
+    def save_node_content(self, node_content):
+        """Сохранение содержимого узла"""
+        content_json = json.dumps(node_content.to_dict())
+        encrypted = self.encrypt_data(content_json)
+        self.cursor.execute("""
+            INSERT OR REPLACE INTO node_content (node_id, content)
+            VALUES (?, ?)
+        """, (node_content.node_id, encrypted))
+        self.conn.commit()
+    
+    def load_node_content(self, node_id: int):
+        """Загрузка содержимого узла"""
+        self.cursor.execute("SELECT content FROM node_content WHERE node_id = ?", (node_id,))
+        row = self.cursor.fetchone()
+        if row:
+            decrypted = self.decrypt_data(row['content'])
+            data = json.loads(decrypted)
+            tabs = []
+            for tab_data in data.get('tabs', []):
+                tab = ContentTab(
+                    tab_id=tab_data['tab_id'],
+                    tab_type=ContentTabType(tab_data['tab_type']),
+                    title=tab_data['title'],
+                    data=tab_data['data']
+                )
+                tabs.append(tab)
+            return NodeContent(node_id=node_id, tabs=tabs)
+        return None
 
 
 class DatabaseManager:

@@ -28,7 +28,7 @@ from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap,
 
 from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
-from models import Node, Edge, LineType, NodeContent, ContentTabType
+from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
 
 
 class PasswordDialog(QDialog):
@@ -480,32 +480,12 @@ class MainWindow(QMainWindow):
     
     def open_node_editor(self, node_id: int):
         """Открытие редактора узла"""
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QTabWidget
         node = self.db_session.get_node(node_id)
 
         if node.content is None:
             node.content = NodeContent(node_id=node.id)
-            self.db_session.conn.commit()
 
-        dialog = NodeContentEditorDialog(node, self)
-        dialog.setWindowTitle(f"Редактор узла")
-        dialog.setMinimumSize(800, 600)
-        
-        layout = QVBoxLayout()
-        
-        # Вкладки
-        tab_widget = QTabWidget()
-        
-        # Вкладка текста
-        text_edit = QTextEdit()
-        text_edit.setHtml("<h1>Редактор контента</h1><p>Функционал будет добавлен на следующем этапе</p>")
-        tab_widget.addTab(text_edit, "Текст")
-        
-        # TODO: Добавить другие вкладки
-        
-        layout.addWidget(tab_widget)
-        
-        dialog.setLayout(layout)
+        dialog = NodeContentEditorDialog(node, self, self.db_session)
         dialog.exec()
     
     def save_data(self):
@@ -749,9 +729,10 @@ class MainWindow(QMainWindow):
             print(f"Ошибка при создании дочернего узла: {e}")
 
 class NodeContentEditorDialog(QDialog):
-    def __init__(self, node, parent=None):
+    def __init__(self, node, parent=None, db_session=None):
         super().__init__(parent)
         self.node = node
+        self.db_session = db_session
         self.setWindowTitle("Содержимое узла")
         self.resize(800, 600)
 
@@ -787,15 +768,23 @@ class NodeContentEditorDialog(QDialog):
 
         self.add_tab_button.setMenu(self.add_tab_menu)
 
+        # Обработчики для меню добавления вкладок
+        self.add_tab_menu.triggered.connect(self.add_tab)
+
         # ====== СБОРКА UI ======
         self._build_ui()
 
         # ====== СИГНАЛЫ ======
         self.edit_title_button.clicked.connect(self.start_title_edit)
         self.title_edit.editingFinished.connect(self.finish_title_edit)
+
+        # Загрузка существующих вкладок
+        for tab in self.node.content.tabs:
+            widget = self.create_tab_widget(tab)
+            self.tabs.addTab(widget, tab.title)
+
+        self.finished.connect(lambda: self.save_node_content())
         
-        # Обработчики для меню добавления вкладок
-        self.add_tab_menu.triggered.connect(self.add_tab)
 
     def _build_ui(self):
         main_layout = QVBoxLayout(self)
@@ -823,6 +812,10 @@ class NodeContentEditorDialog(QDialog):
 
         main_layout.addLayout(tabs_header)
         main_layout.addWidget(self.tabs)
+
+        # Контекстное меню вкладок
+        self.tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tabs.customContextMenuRequested.connect(self.on_tab_context_menu)
 
     # ====== ЛОГИКА ======
 
@@ -857,37 +850,129 @@ class NodeContentEditorDialog(QDialog):
 
     def add_tab(self, action):
         """Добавление новой вкладки"""
-        tab_type_text = action.text()
+        #tab_type_text = action.text()
         
         # Определяем тип вкладки
-        if tab_type_text == "Текст":
-            tab_type = ContentTabType.TEXT
-        elif tab_type_text == "Файлы":
-            tab_type = ContentTabType.FILES
-        elif tab_type_text == "Список":
-            tab_type = ContentTabType.LIST
-        elif tab_type_text == "Список дел":
-            tab_type = ContentTabType.TODO
-        elif tab_type_text == "Даты":
-            tab_type = ContentTabType.DATES
-        else:
-            return
+        #if tab_type_text == "Текст":
+        #    tab_type = ContentTabType.TEXT
+        #elif tab_type_text == "Файлы":
+        #    tab_type = ContentTabType.FILES
+        #elif tab_type_text == "Список":
+        #    tab_type = ContentTabType.LIST
+        #elif tab_type_text == "Список дел":
+        #    tab_type = ContentTabType.TODO
+        #elif tab_type_text == "Даты":
+        #    tab_type = ContentTabType.DATES
+        #else:
+        #    return
         
         # Добавляем вкладку в модель
-        new_tab = self.node.content.add_tab(tab_type)
+        #new_tab = self.node.content.add_tab(tab_type)
         
         # Создаем виджет для вкладки
-        if tab_type == ContentTabType.TEXT:
-            widget = QTextEdit()
-            widget.setPlainText("Новая текстовая вкладка")
-        elif tab_type == ContentTabType.FILES:
-            widget = QLabel("Функционал прикрепления файлов будет добавлен")
-        elif tab_type == ContentTabType.LIST:
-            widget = QListWidget()
-        elif tab_type == ContentTabType.TODO:
-            widget = QLabel("Функционал списка дел будет добавлен")
-        elif tab_type == ContentTabType.DATES:
-            widget = QLabel("Функционал дат будет добавлен")
+        #if tab_type == ContentTabType.TEXT:
+        #    widget = QTextEdit()
+        #    widget.setPlainText("Новая текстовая вкладка")
+        #elif tab_type == ContentTabType.FILES:
+        #    widget = QLabel("Функционал прикрепления файлов будет добавлен")
+        #elif tab_type == ContentTabType.LIST:
+        #    widget = QListWidget()
+        #elif tab_type == ContentTabType.TODO:
+        #    widget = QLabel("Функционал списка дел будет добавлен")
+        #elif tab_type == ContentTabType.DATES:
+        #    widget = QLabel("Функционал дат будет добавлен")
         
         # Добавляем вкладку в UI
-        self.tabs.addTab(widget, new_tab.title)
+        #self.tabs.addTab(widget, new_tab.title)
+
+        tab_type_map = {
+            "Текст": ContentTabType.TEXT,
+            "Файлы": ContentTabType.FILES,
+            "Список": ContentTabType.LIST,
+            "Список дел": ContentTabType.TODO,
+            "Даты": ContentTabType.DATES,
+        }
+
+        tab_type = tab_type_map.get(action.text())
+        if not tab_type:
+            return
+
+        tab = self.node.content.add_tab(tab_type)
+
+        widget = self.create_tab_widget(tab)
+        index = self.tabs.addTab(widget, tab.title)
+        self.tabs.setCurrentIndex(index)
+
+        self.save_node_content()
+
+    # Создание UI для вкладки (фабрика)
+    def create_tab_widget(self, tab: ContentTab):
+        if tab.tab_type == ContentTabType.TEXT:
+            widget = QTextEdit()
+            widget.setPlainText(tab.data.get('text', ''))
+        elif tab.tab_type == ContentTabType.LIST:
+            widget = QListWidget()
+            for item_text in tab.data.get('items', []):
+                widget.addItem(item_text)
+        else:
+            widget = QLabel(f"{tab.tab_type.value} — в разработке")
+
+        widget._content_tab = tab
+        return widget
+    
+    def save_tab_data(self, widget, tab):
+        if tab.tab_type == ContentTabType.TEXT:
+            tab.data['text'] = widget.toPlainText()
+        elif tab.tab_type == ContentTabType.LIST:
+            tab.data['items'] = [widget.item(i).text() for i in range(widget.count())]
+    
+    # Сохранение вкладок узла
+    def save_node_content(self):
+        try:
+            # Сохранить данные всех вкладок
+            for i in range(self.tabs.count()):
+                widget = self.tabs.widget(i)
+                tab = widget._content_tab
+                self.save_tab_data(widget, tab)
+            
+            self.node.content.save(self.db_session)
+        except Exception as e:
+            print("Ошибка сохранения содержимого узла:", e)
+
+    # Контекстное меню вкладок
+    def on_tab_context_menu(self, pos):
+        index = self.tabs.tabBar().tabAt(pos)
+        if index < 0:
+            return
+
+        menu = QMenu(self)
+        delete_action = menu.addAction("Удалить")
+
+        action = menu.exec(self.tabs.mapToGlobal(pos))
+        if action == delete_action:
+            self.confirm_delete_tab(index)
+
+    # Подтверждение удаления вкладки
+    def confirm_delete_tab(self, index):
+        reply = QMessageBox.question(
+            self,
+            "Удаление вкладки",
+            "Удалить вкладку без возможности восстановления?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.delete_tab(index)
+
+    # Удаление вкладки + сохранение
+    def delete_tab(self, index):
+        widget = self.tabs.widget(index)
+        tab = getattr(widget, "_content_tab", None)
+
+        self.tabs.removeTab(index)
+
+        if tab:
+            self.node.content.remove_tab(tab.tab_id)
+            self.save_node_content()
+
+    
