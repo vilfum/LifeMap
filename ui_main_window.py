@@ -760,7 +760,19 @@ class TextTabWidget(BaseTabWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.editor)
 
+        # Загружаем содержимое из модели при создании виджета
+        try:
+            self.load_from_model()
+        except Exception:
+            pass
+
+        # Подключаем обработчики событий *после* загрузки,
+        # чтобы программная установка текста не пометила вкладку как изменённую
         self.editor.textChanged.connect(self.mark_dirty)
+        self.editor.textChanged.connect(self._on_text_changed)
+
+    def _on_text_changed(self):
+        self._dirty = True
 
     # Загрузка текста из узла
     def load_from_model(self):
@@ -772,6 +784,7 @@ class TextTabWidget(BaseTabWidget):
     def save_to_model(self):
         self.tab.data["html"] = self.editor.toHtml()
         super().save_to_model()
+
 
 class NodeContentEditorDialog(QDialog):
     def __init__(self, node, parent=None, db_session=None):
@@ -922,16 +935,8 @@ class NodeContentEditorDialog(QDialog):
     # Создание UI для вкладки (фабрика)
     def create_tab_widget(self, tab: ContentTab):
         if tab.tab_type == ContentTabType.TEXT:
-            widget = QTextEdit()
-            # Поддерживаем как plain text так и html, если есть
-            text_value = tab.data.get('text')
-            html_value = tab.data.get('html')
-            if text_value:
-                widget.setPlainText(text_value)
-            elif html_value:
-                widget.setHtml(html_value)
-            else:
-                widget.setPlainText('')
+            # Используем специализированный виджет, чтобы отслеживать изменения
+            widget = TextTabWidget(tab)
         elif tab.tab_type == ContentTabType.LIST:
             widget = QListWidget()
             for item_text in tab.data.get('items', []):
@@ -940,7 +945,11 @@ class NodeContentEditorDialog(QDialog):
             widget = QLabel(f"{tab.tab_type.value} — в разработке")
 
         # Привяжем объект ContentTab к виджету, чтобы можно было сохранять/удалять
-        widget._content_tab = tab
+        try:
+            widget._content_tab = tab
+        except Exception:
+            pass
+
         return widget
     
     #def save_tab_data(self, widget, tab):
