@@ -728,6 +728,51 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Ошибка при создании дочернего узла: {e}")
 
+
+class BaseTabWidget(QWidget):
+    """Контракт для виджетов вкладок узла"""
+    def __init__(self, tab, parent=None):
+        super().__init__(parent)
+        self.tab = tab          # данные вкладки
+        self._dirty = False     # изменялась ли вкладка
+
+    def mark_dirty(self):
+        self._dirty = True
+
+    def is_dirty(self):
+        return self._dirty
+
+    def load_from_model(self):
+        pass
+
+    def save_to_model(self):
+        self._dirty = False
+
+
+class TextTabWidget(BaseTabWidget):
+    """Виджет для текстовой вкладки"""
+    def __init__(self, tab, parent=None):
+        super().__init__(tab, parent)
+
+        self.editor = QTextEdit(self)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.editor)
+
+        self.editor.textChanged.connect(self.mark_dirty)
+
+    # Загрузка текста из узла
+    def load_from_model(self):
+        html = self.tab.data.get("html", "")
+        self.editor.setHtml(html)
+        self._dirty = False
+
+    # Сохранение текста в узел
+    def save_to_model(self):
+        self.tab.data["html"] = self.editor.toHtml()
+        super().save_to_model()
+
 class NodeContentEditorDialog(QDialog):
     def __init__(self, node, parent=None, db_session=None):
         super().__init__(parent)
@@ -753,6 +798,7 @@ class NodeContentEditorDialog(QDialog):
         # Вкладки
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(False)
+        self._current_tab_widget = None
 
         # Кнопка добавления вкладки
         self.add_tab_button = QPushButton("+")
@@ -850,41 +896,6 @@ class NodeContentEditorDialog(QDialog):
 
     def add_tab(self, action):
         """Добавление новой вкладки"""
-        #tab_type_text = action.text()
-        
-        # Определяем тип вкладки
-        #if tab_type_text == "Текст":
-        #    tab_type = ContentTabType.TEXT
-        #elif tab_type_text == "Файлы":
-        #    tab_type = ContentTabType.FILES
-        #elif tab_type_text == "Список":
-        #    tab_type = ContentTabType.LIST
-        #elif tab_type_text == "Список дел":
-        #    tab_type = ContentTabType.TODO
-        #elif tab_type_text == "Даты":
-        #    tab_type = ContentTabType.DATES
-        #else:
-        #    return
-        
-        # Добавляем вкладку в модель
-        #new_tab = self.node.content.add_tab(tab_type)
-        
-        # Создаем виджет для вкладки
-        #if tab_type == ContentTabType.TEXT:
-        #    widget = QTextEdit()
-        #    widget.setPlainText("Новая текстовая вкладка")
-        #elif tab_type == ContentTabType.FILES:
-        #    widget = QLabel("Функционал прикрепления файлов будет добавлен")
-        #elif tab_type == ContentTabType.LIST:
-        #    widget = QListWidget()
-        #elif tab_type == ContentTabType.TODO:
-        #    widget = QLabel("Функционал списка дел будет добавлен")
-        #elif tab_type == ContentTabType.DATES:
-        #    widget = QLabel("Функционал дат будет добавлен")
-        
-        # Добавляем вкладку в UI
-        #self.tabs.addTab(widget, new_tab.title)
-
         tab_type_map = {
             "Текст": ContentTabType.TEXT,
             "Файлы": ContentTabType.FILES,
@@ -899,6 +910,9 @@ class NodeContentEditorDialog(QDialog):
 
         tab = self.node.content.add_tab(tab_type)
 
+        if tab not in self.node.content.tabs:
+            self.node.content.tabs.append(tab)
+
         widget = self.create_tab_widget(tab)
         index = self.tabs.addTab(widget, tab.title)
         self.tabs.setCurrentIndex(index)
@@ -909,7 +923,15 @@ class NodeContentEditorDialog(QDialog):
     def create_tab_widget(self, tab: ContentTab):
         if tab.tab_type == ContentTabType.TEXT:
             widget = QTextEdit()
-            widget.setPlainText(tab.data.get('text', ''))
+            # Поддерживаем как plain text так и html, если есть
+            text_value = tab.data.get('text')
+            html_value = tab.data.get('html')
+            if text_value:
+                widget.setPlainText(text_value)
+            elif html_value:
+                widget.setHtml(html_value)
+            else:
+                widget.setPlainText('')
         elif tab.tab_type == ContentTabType.LIST:
             widget = QListWidget()
             for item_text in tab.data.get('items', []):
@@ -917,14 +939,15 @@ class NodeContentEditorDialog(QDialog):
         else:
             widget = QLabel(f"{tab.tab_type.value} — в разработке")
 
+        # Привяжем объект ContentTab к виджету, чтобы можно было сохранять/удалять
         widget._content_tab = tab
         return widget
     
-    def save_tab_data(self, widget, tab):
-        if tab.tab_type == ContentTabType.TEXT:
-            tab.data['text'] = widget.toPlainText()
-        elif tab.tab_type == ContentTabType.LIST:
-            tab.data['items'] = [widget.item(i).text() for i in range(widget.count())]
+    #def save_tab_data(self, widget, tab):
+    #    if tab.tab_type == ContentTabType.TEXT:
+    #        tab.data['text'] = widget.toPlainText()
+    #    elif tab.tab_type == ContentTabType.LIST:
+    #        tab.data['items'] = [widget.item(i).text() for i in range(widget.count())]
     
     # Сохранение вкладок узла
     def save_node_content(self):
@@ -932,9 +955,18 @@ class NodeContentEditorDialog(QDialog):
             # Сохранить данные всех вкладок
             for i in range(self.tabs.count()):
                 widget = self.tabs.widget(i)
-                tab = widget._content_tab
-                self.save_tab_data(widget, tab)
-            
+                tab = getattr(widget, "_content_tab", None)
+
+                if hasattr(widget, "save_to_model"):
+                    # Для собственных виджетов типа BaseTabWidget
+                    widget.save_to_model()
+                elif isinstance(widget, QTextEdit) and tab is not None:
+                    # Сохраняем plain text в модель
+                    tab.data['text'] = widget.toPlainText()
+                elif isinstance(widget, QListWidget) and tab is not None:
+                    tab.data['items'] = [widget.item(j).text() for j in range(widget.count())]
+
+            # Сохраняем весь контент узла в БД
             self.node.content.save(self.db_session)
         except Exception as e:
             print("Ошибка сохранения содержимого узла:", e)
@@ -974,5 +1006,10 @@ class NodeContentEditorDialog(QDialog):
         if tab:
             self.node.content.remove_tab(tab.tab_id)
             self.save_node_content()
+
+    # Сохранение перед закрытием
+    def closeEvent(self, event):
+        self.save_node_content()
+        super().closeEvent(event)
 
     
