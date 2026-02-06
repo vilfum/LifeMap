@@ -737,6 +737,8 @@ class BaseTabWidget(QWidget):
         self._dirty = False     # изменялась ли вкладка
 
     def mark_dirty(self):
+        if not self._dirty:
+            print(f"✏️ BaseTabWidget: вкладка {self.tab.title} стала грязной")
         self._dirty = True
 
     def is_dirty(self):
@@ -746,7 +748,14 @@ class BaseTabWidget(QWidget):
         pass
 
     def save_to_model(self):
+        if not self._dirty:
+            return
+
+        html = self.editor.toHtml()
+        self.tab.data["html"] = html
         self._dirty = False
+
+        print("✅ TextTabWidget: данные сохранены, вкладка очищена")
 
 
 class TextTabWidget(BaseTabWidget):
@@ -769,10 +778,10 @@ class TextTabWidget(BaseTabWidget):
         # Подключаем обработчики событий *после* загрузки,
         # чтобы программная установка текста не пометила вкладку как изменённую
         self.editor.textChanged.connect(self.mark_dirty)
-        self.editor.textChanged.connect(self._on_text_changed)
+        #self.editor.textChanged.connect(self._on_text_changed)
 
-    def _on_text_changed(self):
-        self._dirty = True
+    #def _on_text_changed(self):
+    #    self._dirty = True
 
     # Загрузка текста из узла
     def load_from_model(self):
@@ -830,12 +839,17 @@ class NodeContentEditorDialog(QDialog):
         # Обработчики для меню добавления вкладок
         self.add_tab_menu.triggered.connect(self.add_tab)
 
+        # Переменные для отслеживания состояния
+        self._previous_tab_widget = None # Виджет предыдущей вкладки, чтобы сохранять данные при переключении
+        self._is_saving = False  # Флаг для предотвращения рекурсии при сохранении
+
         # ====== СБОРКА UI ======
         self._build_ui()
 
         # ====== СИГНАЛЫ ======
         self.edit_title_button.clicked.connect(self.start_title_edit)
         self.title_edit.editingFinished.connect(self.finish_title_edit)
+        self.tabs.currentChanged.connect(self.on_tab_changed)
 
         # Загрузка существующих вкладок
         for tab in self.node.content.tabs:
@@ -959,26 +973,63 @@ class NodeContentEditorDialog(QDialog):
     #        tab.data['items'] = [widget.item(i).text() for i in range(widget.count())]
     
     # Сохранение вкладок узла
+    #def save_node_content(self):
+    #    try:
+    #        # Сохранить данные всех вкладок
+    #        for i in range(self.tabs.count()):
+    #            widget = self.tabs.widget(i)
+    #            tab = getattr(widget, "_content_tab", None)
+    #
+    #            if hasattr(widget, "is_dirty") and widget.is_dirty():
+    #                print(f"🟡 save_node_content: вкладка {i} грязная → сохраняю")
+    #                widget.save_to_model()
+    #                # Для собственных виджетов типа BaseTabWidget
+    #                #widget.save_to_model()
+    #            elif isinstance(widget, QTextEdit) and tab is not None:
+    #                # Сохраняем plain text в модель
+    #                tab.data['text'] = widget.toPlainText()
+    #            elif isinstance(widget, QListWidget) and tab is not None:
+    #                tab.data['items'] = [widget.item(j).text() for j in range(widget.count())]
+    #
+    #        # Сохраняем весь контент узла в БД
+    #        self.node.content.save(self.db_session)
+    #        print("💾 save_node_content: данные узла сохранены")
+    #    except Exception as e:
+    #        print("Ошибка сохранения содержимого узла:", e)
+
+    # Улучшенная версия сохранения с поддержкой флага "грязности" и специализированных виджетов
     def save_node_content(self):
+        if self._is_saving:
+            return
+
+        self._is_saving = True
         try:
-            # Сохранить данные всех вкладок
             for i in range(self.tabs.count()):
                 widget = self.tabs.widget(i)
-                tab = getattr(widget, "_content_tab", None)
 
-                if hasattr(widget, "save_to_model"):
-                    # Для собственных виджетов типа BaseTabWidget
+                if hasattr(widget, "is_dirty") and widget.is_dirty():
+                    print(f"🟡 save_node_content: вкладка {i} грязная → сохраняю")
                     widget.save_to_model()
-                elif isinstance(widget, QTextEdit) and tab is not None:
-                    # Сохраняем plain text в модель
-                    tab.data['text'] = widget.toPlainText()
-                elif isinstance(widget, QListWidget) and tab is not None:
-                    tab.data['items'] = [widget.item(j).text() for j in range(widget.count())]
+                else:
+                    print(f"⚪ save_node_content: вкладка {i} чистая")
 
-            # Сохраняем весь контент узла в БД
             self.node.content.save(self.db_session)
+            print("💾 save_node_content: данные узла сохранены")
+
         except Exception as e:
-            print("Ошибка сохранения содержимого узла:", e)
+            print("❌ Ошибка сохранения содержимого узла:", e)
+
+        finally:
+            self._is_saving = False
+
+    # Обработка смены вкладки
+    def on_tab_changed(self, index):
+        if self._previous_tab_widget:
+            if hasattr(self._previous_tab_widget, "is_dirty") and self._previous_tab_widget.is_dirty():
+                print("🔄 Переключение вкладки: сохраняю предыдущую")
+                self._previous_tab_widget.save_to_model()
+
+        self._previous_tab_widget = self.tabs.widget(index)
 
     # Контекстное меню вкладок
     def on_tab_context_menu(self, pos):
