@@ -16,6 +16,7 @@
 import sys
 from pathlib import Path
 from typing import Optional, cast
+import json
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
@@ -82,6 +83,8 @@ class PasswordDialog(QDialog):
 class MainWindow(QMainWindow):
     """Главное окно приложения"""
     
+    CONFIG_FILE = Path("data/config.json")
+    
     def __init__(self):
         super().__init__()
         
@@ -91,11 +94,13 @@ class MainWindow(QMainWindow):
         self.current_file = None
         self.password = None
         
-        # Настройки
-        self.dark_mode = False
+        # Настройки - загружаем из конфига
+        self.dark_mode = self.load_theme_setting()
         
         # Запуск
         self.init_ui()
+        # Применяем сохраненную тему при инициализации (всегда, с задержкой)
+        QTimer.singleShot(50, self.apply_theme)
         self.show_login_dialog()
     
     def init_ui(self):
@@ -502,9 +507,13 @@ class MainWindow(QMainWindow):
             self.save_data()
     
     def toggle_theme(self):
-        """Переключение темы - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+        """Переключение темы и сохранение выбора"""
         self.dark_mode = not self.dark_mode
+        self.save_theme_setting(self.dark_mode)
+        self.apply_theme()
     
+    def apply_theme(self):
+        """Применить текущую тему на основе self.dark_mode"""
         # Получаем текущее приложение
         app = QApplication.instance()
     
@@ -728,6 +737,50 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Ошибка при создании дочернего узла: {e}")
 
+    # ====== УПРАВЛЕНИЕ ТЕМОЙ И КОНФИГОМ ======
+    
+    @staticmethod
+    def load_theme_setting() -> bool:
+        """Загрузить сохраненную тему из конфига"""
+        config_file = MainWindow.CONFIG_FILE
+        
+        try:
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    return config.get('dark_mode', False)
+        except Exception as e:
+            print(f"Ошибка при загрузке конфига: {e}")
+        
+        # По умолчанию - светлая тема
+        return False
+    
+    @staticmethod
+    def save_theme_setting(dark_mode: bool):
+        """Сохранить выбранную тему в конфиг"""
+        config_file = MainWindow.CONFIG_FILE
+        
+        try:
+            # Создаем папку если не существует
+            config_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Загружаем существующий конфиг или создаём новый
+            config = {}
+            if config_file.exists():
+                with open(config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            
+            # Обновляем значение темы
+            config['dark_mode'] = dark_mode
+            
+            # Сохраняем конфиг
+            with open(config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+                
+            print(f"Тема сохранена: {'Темная' if dark_mode else 'Светлая'}")
+        except Exception as e:
+            print(f"Ошибка при сохранении конфига: {e}")
+
 
 class BaseTabWidget(QWidget):
     """Контракт для виджетов вкладок узла"""
@@ -795,6 +848,99 @@ class TextTabWidget(BaseTabWidget):
         super().save_to_model()
 
 
+class TitleEditField(QLineEdit):
+    """Редактор названия узла с автозавершением при потере фокуса или Enter"""
+    def __init__(self, text, finish_callback, parent=None):
+        super().__init__(text, parent)
+        self.finish_callback = finish_callback
+        self._is_finishing = False
+        self.should_save = True  # Флаг: сохранять ли при завершении
+    
+    def focusOutEvent(self, event):
+        """Завершить редактирование при потере фокуса"""
+        if not self._is_finishing:
+            self._is_finishing = True
+            self.should_save = True  # При потере фокуса - сохраняем
+            # Даём время для обработки других событий
+            QTimer.singleShot(0, self._complete_edit)
+        super().focusOutEvent(event)
+    
+    def _complete_edit(self):
+        """Выполнить завершение редактирования"""
+        self.finish_callback(save=self.should_save)
+        self._is_finishing = False
+    
+    def keyPressEvent(self, event):
+        """Обработать Enter и Escape"""
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            # Enter - сохраняем и закрываем
+            if not self._is_finishing:
+                self._is_finishing = True
+                self.should_save = True
+                self.finish_callback(save=True)
+                self._is_finishing = False
+            event.accept()
+        elif event.key() == Qt.Key.Key_Escape:
+            # Escape - просто закрываем БЕЗ сохранения
+            if not self._is_finishing:
+                self._is_finishing = True
+                self.should_save = False
+                self.finish_callback(save=False)
+                self._is_finishing = False
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+
+class TabRenameEditField(QLineEdit):
+    """Редактор названия вкладки с автозавершением при потере фокуса или Enter"""
+    def __init__(self, text, finish_callback, parent=None):
+        super().__init__(text, parent)
+        self.finish_callback = finish_callback
+        self._is_finishing = False
+        self.should_save = True  # Флаг: сохранять ли при завершении
+    
+    def focusOutEvent(self, event):
+        """Завершить редактирование при потере фокуса"""
+        if not self._is_finishing:
+            self._is_finishing = True
+            self.should_save = True  # При потере фокуса - сохраняем
+            # Даём время для обработки других событий
+            QTimer.singleShot(0, self._complete_edit)
+        super().focusOutEvent(event)
+    
+    def _complete_edit(self):
+        """Выполнить завершение редактирования"""
+        self.finish_callback(save=self.should_save)
+        self._is_finishing = False
+    
+    def mousePressEvent(self, event):
+        """При клике в самом поле - продолжать редактирование"""
+        super().mousePressEvent(event)
+        event.accept()
+    
+    def keyPressEvent(self, event):
+        """Обработать Enter и Escape"""
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            # Enter - сохраняем и закрываем
+            if not self._is_finishing:
+                self._is_finishing = True
+                self.should_save = True
+                self.finish_callback(save=True)
+                self._is_finishing = False
+            event.accept()
+        elif event.key() == Qt.Key.Key_Escape:
+            # Escape - просто закрываем БЕЗ сохранения
+            if not self._is_finishing:
+                self._is_finishing = True
+                self.should_save = False
+                self.finish_callback(save=False)
+                self._is_finishing = False
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+
 class NodeContentEditorDialog(QDialog):
     def __init__(self, node, parent=None, db_session=None):
         super().__init__(parent)
@@ -803,13 +949,17 @@ class NodeContentEditorDialog(QDialog):
         self.setWindowTitle("Содержимое узла")
         self.resize(800, 600)
 
+        # ====== ИНИЦИАЛИЗАЦИЯ ФЛАГОВ ======
+        self._editing_title = False
+        self._tab_edit_active = False
+
         # ====== ВИДЖЕТЫ ======
 
         # Название
         self.title_label = QLabel(self.node.title)
         self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
 
-        self.title_edit = QLineEdit(self.node.title)
+        self.title_edit = TitleEditField(self.node.title, self.finish_title_edit)
         self.title_edit.setVisible(False)
         self.title_edit.setStyleSheet("font-size: 18px;")
 
@@ -848,8 +998,9 @@ class NodeContentEditorDialog(QDialog):
 
         # ====== СИГНАЛЫ ======
         self.edit_title_button.clicked.connect(self.start_title_edit)
-        self.title_edit.editingFinished.connect(self.finish_title_edit)
+        # TitleEditField уже подключает editingFinished и returnPressed через _on_finish
         self.tabs.currentChanged.connect(self.on_tab_changed)
+        self.tabs.tabBar().tabBarDoubleClicked.connect(self.start_rename_tab)
 
         # Загрузка существующих вкладок
         for tab in self.node.content.tabs:
@@ -889,37 +1040,128 @@ class NodeContentEditorDialog(QDialog):
         # Контекстное меню вкладок
         self.tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabs.customContextMenuRequested.connect(self.on_tab_context_menu)
+        
+        # Установим event filter для перехвата кликов
+        self.tabs.installEventFilter(self)
 
     # ====== ЛОГИКА ======
 
     def start_title_edit(self):
-        self.title_label.setVisible(False)
-        self.title_edit.setVisible(True)
-        self.title_edit.setFocus()
-        self.title_edit.selectAll()
+        # Логика переключения: если поле видно - закрыть его, если скрыто - открыть
+        if self.title_edit.isVisible():
+            # Поле видно - сохранить и закрыть
+            self.finish_title_edit()
+        else:
+            # Поле скрыто - открыть для редактирования
+            self.title_label.setVisible(False)
+            self.title_edit.setVisible(True)
+            self._editing_title = True
+            self.title_edit.setText(self.node.title)
+            self.title_edit.setFocus()
+            # Выделяем текст в отдельном вызове после setFocus
+            QTimer.singleShot(0, self.title_edit.selectAll)
 
-    def finish_title_edit(self):
-        new_title = self.title_edit.text().strip()
-        if new_title and new_title != self.node.title:
-            self.node.title = new_title
-            self.title_label.setText(new_title)
+    # Сохранение нового названия узла
+    def finish_title_edit(self, save=True):
+        # Проверяем флаг, чтобы не обрабатывать дважды
+        if not hasattr(self, "_editing_title") or not self._editing_title:
+            # Если не в режиме редактирования, просто скрыть поле
+            self.title_edit.setVisible(False)
+            self.title_label.setVisible(True)
+            return
+        
+        self._editing_title = False
+        
+        if save:
+            new_title = self.title_edit.text().strip()
+            if new_title:
+                if new_title != self.node.title:
+                    self.node.title = new_title
+                    self.title_label.setText(new_title)
 
-            # --- СОХРАНЕНИЕ В БД ---
-            try:
-                parent = cast(MainWindow, self.parent())
-                parent.db_session.update_node_title(self.node.id, new_title)
-                
-                # Обновляем название в сцене
-                node_item = parent.scene.nodes.get(self.node.id)
-                if node_item:
-                    node_item.title = new_title
-                    node_item.update_appearance()
-                    
-            except Exception as e:
-                print("Ошибка сохранения названия узла:", e)
+                    # --- СОХРАНЕНИЕ В БД ---
+                    try:
+                        parent = cast(MainWindow, self.parent())
+                        parent.db_session.update_node_title(self.node.id, new_title)
+                        
+                        # Обновляем название в сцене
+                        node_item = parent.scene.nodes.get(self.node.id)
+                        if node_item:
+                            node_item.title = new_title
+                            node_item.update_appearance()
+                            
+                    except Exception as e:
+                        print("Ошибка сохранения названия узла:", e)
+                else:
+                    # Название не изменилось - просто обновляем label
+                    self.title_label.setText(self.node.title)
+        else:
+            # Отмена - восстанавливаем исходное название
+            self.title_label.setText(self.node.title)
 
+        # Скрываем поле редактирования и показываем label
         self.title_edit.setVisible(False)
         self.title_label.setVisible(True)
+
+    def start_rename_tab(self, index):
+        if index < 0:
+            return
+
+        # Проверяем, может ли быть максимально одно поле редактирования одновременно
+        # Если уже открыто другое поле - закрыть его
+        existing_edit = getattr(self, "_tab_rename_edit", None)
+        if existing_edit is not None:
+            self.finish_rename_tab()
+
+        tab_bar = self.tabs.tabBar()
+        rect = tab_bar.tabRect(index)
+
+        # Создаем поле редактирования
+        self._tab_rename_edit = TabRenameEditField(self.tabs.tabText(index), self.finish_rename_tab, tab_bar)
+        self._tab_rename_edit.setGeometry(rect)
+        self._tab_rename_edit.show()
+        self._tab_rename_edit.setFocus()
+        # Выделяем текст в отдельном вызове после setFocus
+        QTimer.singleShot(0, self._tab_rename_edit.selectAll)
+
+        self._renaming_tab_index = index
+        self._tab_edit_active = True
+
+    def finish_rename_tab(self, save=True):
+        # Проверяем флаг, чтобы не обрабатывать дважды
+        if not getattr(self, "_tab_edit_active", False):
+            return
+            
+        self._tab_edit_active = False
+        
+        edit = getattr(self, "_tab_rename_edit", None)
+        if edit is None:
+            return
+
+        # Сохраняем данные ДО удаления виджета
+        if save:
+            new_title = edit.text().strip()
+            index = self._renaming_tab_index
+
+            if new_title:
+                self.tabs.setTabText(index, new_title)
+
+                widget = self.tabs.widget(index)
+                tab = getattr(widget, "_content_tab", None)
+                if tab:
+                    if tab.title != new_title:  # Только если название действительно изменилось
+                        tab.title = new_title
+                        # Сохраняем изменение в БД
+                        print(f"Сохраняю изменение названия вкладки: {new_title}")
+                        self.save_node_content()
+
+        # Удаляем редактор
+        if edit:
+            edit.blockSignals(True)  # Блокируем сигналы перед удалением
+            edit.hide()
+            edit.deleteLater()
+        if hasattr(self, "_tab_rename_edit"):
+            del self._tab_rename_edit
 
     def add_tab(self, action):
         """Добавление новой вкладки"""
@@ -1023,6 +1265,28 @@ class NodeContentEditorDialog(QDialog):
             self._is_saving = False
 
     # Обработка смены вкладки
+    # Обработка событий
+    def eventFilter(self, obj, event):
+        """Перехватываем клики внутри QTabWidget для завершения редактирования"""
+        from PyQt6.QtCore import QEvent
+        from PyQt6.QtGui import QMouseEvent
+        
+        if obj == self.tabs and event.type() == QEvent.Type.MouseButtonPress:
+            # Если идет редактирование вкладки - проверим, кликнули ли на сам редактор
+            if getattr(self, "_tab_edit_active", False):
+                edit = getattr(self, "_tab_rename_edit", None)
+                if edit and isinstance(event, QMouseEvent):
+                    # Получаем координаты клика в системе координат редактора
+                    editor_rect = edit.geometry()
+                    click_pos = event.pos()
+                    
+                    # Если клик вне редактора - завершить редактирование
+                    if not editor_rect.contains(click_pos):
+                        self.finish_rename_tab(save=True)
+        
+        return super().eventFilter(obj, event)
+
+    # Обработка смены вкладки
     def on_tab_changed(self, index):
         if self._previous_tab_widget:
             if hasattr(self._previous_tab_widget, "is_dirty") and self._previous_tab_widget.is_dirty():
@@ -1038,10 +1302,13 @@ class NodeContentEditorDialog(QDialog):
             return
 
         menu = QMenu(self)
+        rename_action = menu.addAction("Переименовать")
         delete_action = menu.addAction("Удалить")
 
         action = menu.exec(self.tabs.mapToGlobal(pos))
-        if action == delete_action:
+        if action == rename_action:
+            self.start_rename_tab(index)
+        elif action == delete_action:
             self.confirm_delete_tab(index)
 
     # Подтверждение удаления вкладки
