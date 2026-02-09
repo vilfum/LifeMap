@@ -789,6 +789,12 @@ class BaseTabWidget(QWidget):
         super().__init__(parent)
         self.tab = tab          # данные вкладки
         self._dirty = False     # изменялась ли вкладка
+        self.ensure_data()      # гарантируем, что данные вкладки существуют
+
+    # Гарантируем, что data всегда существует
+    def ensure_data(self):
+        if self.tab.data is None:
+            self.tab.data = {}
 
     def mark_dirty(self):
         if not self._dirty:
@@ -811,6 +817,10 @@ class BaseTabWidget(QWidget):
 
         print("✅ TextTabWidget: данные сохранены, вкладка очищена")
 
+    # Вызывается при уходе с вкладки
+    def on_deactivate(self):
+        if hasattr(self, "is_dirty") and self.is_dirty():
+            self.save_to_model()
 
 class TextTabWidget(BaseTabWidget):
     """Виджет для текстовой вкладки"""
@@ -1387,10 +1397,9 @@ class NodeContentEditorDialog(QDialog):
 
     # Обработка смены вкладки
     def on_tab_changed(self, index):
-        if self._previous_tab_widget:
-            if hasattr(self._previous_tab_widget, "is_dirty") and self._previous_tab_widget.is_dirty():
-                print("🔄 Переключение вкладки: сохраняю предыдущую")
-                self._previous_tab_widget.save_to_model()
+        if self._previous_tab_widget and hasattr(self._previous_tab_widget, "on_deactivate"):
+            print("🔄 Переключение вкладки: деактивация предыдущей вкладки")
+            self._previous_tab_widget.on_deactivate()
 
         self._previous_tab_widget = self.tabs.widget(index)
 
