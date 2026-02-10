@@ -855,8 +855,14 @@ class TextTabWidget(BaseTabWidget):
 
     # Сохранение текста в узел
     def save_to_model(self):
+        if not self._dirty:
+            print("💾 TextTabWidget: нет изменений для сохранения")
+            return  # Если нет изменений, не сохраняем
+        
         self.tab.data["html"] = self.editor.toHtml()
         super().save_to_model()
+        self._dirty = False  # Сбрасываем флаг изменений
+        print("💾 TextTabWidget: данные сохранены, вкладка очищена")
 
 
 class ListTabWidget(BaseTabWidget):
@@ -944,6 +950,7 @@ class ListTabWidget(BaseTabWidget):
     def save_to_model(self):
         """Сохранить данные из виджета в модель"""
         if not self._dirty:
+            print("💾 ListTabWidget: нет изменений для сохранения")
             return  # Если нет изменений, не сохраняем
         
         # Собираем все элементы списка
@@ -953,6 +960,111 @@ class ListTabWidget(BaseTabWidget):
             items.append(item.text())
         
         # Сохраняем в модель вкладки
+        self.tab.data["items"] = items
+        self._dirty = False  # Сбрасываем флаг изменений
+        
+        print(f"💾 ListTabWidget: сохранено {len(items)} элементов")
+
+
+class TodoTabWidget(BaseTabWidget):
+    """
+    Вкладка TODO:
+    - список задач с чекбоксами
+    - автосохранение
+    """
+
+    def __init__(self, content_tab, parent=None):
+        super().__init__(content_tab, parent)
+        self.build_ui()
+        self.load_from_model()
+
+    # Создание интерфейса
+    def build_ui(self):
+        layout = QVBoxLayout(self)
+
+        # Список задач
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        layout.addWidget(self.list_widget)
+
+        # Кнопки управления
+
+        self.add_button = QPushButton("Добавить")
+        self.remove_button = QPushButton("Удалить")
+        
+        # Layout
+        layout.addWidget(self.list_widget)
+        
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.add_button)
+        button_layout.addWidget(self.remove_button)
+        layout.addLayout(button_layout)
+        
+        # Сигналы
+        self.add_button.clicked.connect(self.add_item)
+        self.remove_button.clicked.connect(self.remove_item)
+        self.list_widget.itemChanged.connect(self.on_item_changed)
+
+    # Добавление задачи
+    def add_item(self):
+        item_text = f"Новый элемент {self.list_widget.count() + 1}"
+        item = QListWidgetItem(item_text)
+        self.list_widget.addItem(item) 
+        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+        item.setCheckState(Qt.CheckState.Unchecked)
+        self.list_widget.setCurrentItem(item)
+        self.list_widget.editItem(item)
+        self.mark_dirty()  # Помечаем как измененное
+
+    # Удаление задачи
+    def remove_item(self):
+        current_item = self.list_widget.currentItem()
+        if current_item:
+            row = self.list_widget.row(current_item)
+            self.list_widget.takeItem(row)
+            self.mark_dirty()  # Помечаем как измененное
+
+    # Реакция на чекбокс
+    def on_item_changed(self, item):
+        self.mark_dirty()  # Помечаем как измененное
+        # Ничего не делаем здесь
+        # Сохранение произойдёт при деактивации вкладки
+        pass
+
+    # Загрузка данных из модели
+    def load_from_model(self):
+        self.list_widget.clear()
+
+        # Временно отключаем сигнал, чтобы не вызывать mark_dirty при загрузке
+        self.list_widget.itemChanged.disconnect(self.on_item_changed)
+
+        items = self.tab.data.get("items", [])
+        for obj in items:
+            item = QListWidgetItem(obj.get("text", ""))
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEditable)
+            item.setCheckState(Qt.CheckState.Checked if obj.get("done") else Qt.CheckState.Unchecked)
+            self.list_widget.addItem(item)
+
+        # Включаем сигнал обратно
+        self.list_widget.itemChanged.connect(self.on_item_changed)
+        
+        self._dirty = False  # Сбрасываем флаг изменений после загрузки
+
+    # Сохранение данных в модель
+    def save_to_model(self):
+        if not self._dirty:
+            print("💾 ListTabWidget: нет изменений для сохранения")
+            return  # Если нет изменений, не сохраняем
+        
+        # Собираем все элементы списка с их состоянием
+        items = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            items.append({
+                "text": item.text(),
+                "done": item.checkState() == Qt.CheckState.Checked
+            })
+
         self.tab.data["items"] = items
         self._dirty = False  # Сбрасываем флаг изменений
         
@@ -1306,6 +1418,8 @@ class NodeContentEditorDialog(QDialog):
             widget = TextTabWidget(tab)
         elif tab.tab_type == ContentTabType.LIST:
             widget = ListTabWidget(tab)
+        elif tab.tab_type == ContentTabType.TODO:
+            widget = TodoTabWidget(tab) 
         else:
             widget = QLabel(f"{tab.tab_type.value} — в разработке")
 
