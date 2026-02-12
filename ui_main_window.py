@@ -626,6 +626,67 @@ class MainWindow(QMainWindow):
                     border: 2px dashed #2196F3;
                     background-color: rgba(33, 150, 243, 30);
                 }
+                              
+                /* ===== QCalendarWidget DARK ===== */
+                QCalendarWidget {
+                    background-color: #353535;
+                    color: white;
+                }
+
+                QCalendarWidget QWidget#qt_calendar_navigationbar {
+                    background-color: #2b2b2b;
+                }
+
+                QCalendarWidget QToolButton {
+                    background: transparent;
+                    border: none;
+                    color: white;
+                    icon-size: 18px;
+                }
+
+                QCalendarWidget QToolButton:hover {
+                    background-color: #404040;
+                }
+
+                QCalendarWidget QHeaderView::section {
+                    background-color: #2b2b2b;
+                    color: white;
+                    border: none;
+                }
+                QCalendarWidget QAbstractButton {
+                    color: white;
+                }
+                QCalendarWidget QToolButton {
+                    qproperty-icon: none;
+                }
+                QCalendarWidget QToolButton#qt_calendar_prevmonth {
+                    qproperty-text: "<";
+                }
+
+                QCalendarWidget QToolButton#qt_calendar_nextmonth {
+                    qproperty-text: ">";
+                }
+                
+                /* ===== QMessageBox DARK ===== */
+                QMessageBox {
+                   background-color: #353535;
+                }
+                
+                QMessageBox QLabel {
+                    color: #ffffff;
+                }
+
+                QMessageBox QPushButton {
+                    background-color: #2b2b2b;
+                    color: #ffffff;
+                    border: 1px solid #555555;
+                    padding: 4px 12px;
+                    border-radius: 4px;
+                }
+
+                QMessageBox QPushButton:hover {
+                    background-color: #404040;
+                }
             """)
         
             # Фон сцены для темной темы
@@ -710,6 +771,88 @@ class MainWindow(QMainWindow):
                 QGraphicsView::rubberBand {
                     border: 2px dashed #2196F3;
                     background-color: rgba(33, 150, 243, 30);
+                }
+                /* ===== QCalendarWidget LIGHT ===== */
+
+                QCalendarWidget {
+                    background-color: #ffffff;
+                    color: #333333;
+                }
+
+                QCalendarWidget QWidget#qt_calendar_navigationbar {
+                    background-color: #f0f0f0;
+                }
+
+                QCalendarWidget QToolButton {
+                    background: transparent;
+                    border: none;
+                    color: #333333;
+                    icon-size: 18px;
+                }
+
+                QCalendarWidget QToolButton:hover {
+                    background-color: #e0e0e0;
+                }
+
+                QCalendarWidget QHeaderView::section {
+                    background-color: #f0f0f0;
+                    color: #333333;
+                    border: none;
+                }
+                QCalendarWidget QAbstractButton {
+                    color: #333333;
+                }
+                QCalendarWidget QToolButton {
+                    qproperty-icon: none;
+                }
+                QCalendarWidget QToolButton#qt_calendar_prevmonth {
+                    qproperty-text: "<";
+                }
+
+                QCalendarWidget QToolButton#qt_calendar_nextmonth {
+                    qproperty-text: ">";
+                }
+                        
+                /* ===== QCalendarWidget LIGHT FINAL FIX ===== */
+                /* Внутренний view календаря */
+                QCalendarWidget QTableView#qt_calendar_calendarview {
+                    background-color: #f0f0f0;
+                    alternate-background-color: #f0f0f0;
+                    gridline-color: #dddddd;
+                    color: #333333;
+                }
+
+                /* Строка дней недели */
+                QCalendarWidget QTableView#qt_calendar_calendarview QHeaderView::section {
+                    background-color: #ffffff;
+                    color: #dddddd;
+                    border: none;
+                }
+
+                /* Убираем тёмную рамку */
+                QCalendarWidget QTableView {
+                    border: none;
+                }
+                
+                /* ===== QMessageBox LIGHT ===== */
+                QMessageBox {
+                    background-color: #ffffff;
+                }
+
+                QMessageBox QLabel {
+                    color: #333333;
+                }
+
+                QMessageBox QPushButton {
+                    background-color: #f0f0f0;
+                    color: #333333;
+                    border: 1px solid #cccccc;
+                    padding: 4px 12px;
+                    border-radius: 4px;
+                }
+
+                QMessageBox QPushButton:hover {
+                    background-color: #e0e0e0;
                 }
             """)
         
