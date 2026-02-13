@@ -14,6 +14,8 @@
 Главное окно приложения
 """
 import sys
+import os
+import shutil
 from pathlib import Path
 from typing import Optional, cast
 import json
@@ -23,10 +25,11 @@ from PyQt6.QtWidgets import (
     QToolBar, QStatusBar, QMessageBox, QInputDialog,
     QApplication, QSplitter, QFileDialog, QDialog, QLabel,
     QLineEdit, QPushButton, QCheckBox, QTabWidget, QMenu, QTextEdit, QListWidget,
-    QListWidgetItem, QAbstractItemView, QDateEdit, QScrollArea
+    QListWidgetItem, QAbstractItemView, QDateEdit, QScrollArea,
+    QFileIconProvider
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QPointF, QRectF, QDate
-from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap, QPainter, QBrush
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QPointF, QRectF, QDate, QUrl, QFileInfo
+from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap, QPainter, QBrush, QDesktopServices
 
 from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
@@ -1141,8 +1144,15 @@ class TodoTabWidget(BaseTabWidget):
         self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         layout.addWidget(self.list_widget)
 
-        # Кнопки управления
+        # Подключаем сигнал изменений элементов
+        self.list_widget.itemChanged.connect(self.on_item_changed)
+        # Сигналы для отслеживания перемещений
+        # 1. При изменении данных (включая перемещение)
+        self.list_widget.model().dataChanged.connect(self.on_data_changed)
+        # 2. При изменении структуры (перемещение строк)
+        self.list_widget.model().rowsMoved.connect(self.on_rows_moved)
 
+        # Кнопки управления
         self.add_button = QPushButton("Добавить")
         self.remove_button = QPushButton("Удалить")
         
@@ -1153,6 +1163,11 @@ class TodoTabWidget(BaseTabWidget):
         button_layout.addWidget(self.add_button)
         button_layout.addWidget(self.remove_button)
         layout.addLayout(button_layout)
+
+        # Разрешаем перетаскивание для изменения порядка задач
+        self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
+
         
         # Сигналы
         self.add_button.clicked.connect(self.add_item)
@@ -1218,11 +1233,24 @@ class TodoTabWidget(BaseTabWidget):
                 "text": item.text(),
                 "done": item.checkState() == Qt.CheckState.Checked
             })
+        self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         self.tab.data["items"] = items
         self._dirty = False  # Сбрасываем флаг изменений
-        
         print(f"💾 ListTabWidget: сохранено {len(items)} элементов")
+
+    def on_item_changed(self, item):
+        """Вызывается при изменении текста элемента (редактировании)"""
+        self.mark_dirty()  # Помечаем как измененное
+
+    def on_data_changed(self, topLeft, bottomRight, roles):
+        """Вызывается при изменении данных в модели"""
+        self.mark_dirty()
+
+    def on_rows_moved(self, parent, start, end, destination, row):
+        """Вызывается при перемещении строк (drag and drop)"""
+        self.mark_dirty()
 
 
 class DatesTabWidget(BaseTabWidget):
@@ -1246,6 +1274,9 @@ class DatesTabWidget(BaseTabWidget):
         self.container_layout.setContentsMargins(5, 5, 5, 5)
         self.container_layout.setSpacing(5)
 
+        # Разрешаем перетаскивание для добавления событий
+        self.container.setAcceptDrops(True)
+
         # ScrollArea
         self.scroll = QScrollArea()                   # <-- сохраняем как self.scroll
         self.scroll.setWidgetResizable(True)
@@ -1263,7 +1294,7 @@ class DatesTabWidget(BaseTabWidget):
 
     def _apply_theme_to_widget(self, widget):
         """Применить тему к динамически созданному виджету"""
-        print(f"   _apply_theme_to_widget: {widget.__class__.__name__}")
+        #print(f"   _apply_theme_to_widget: {widget.__class__.__name__}")
         dialog = self.window()
         if not dialog:
             return
@@ -1272,7 +1303,7 @@ class DatesTabWidget(BaseTabWidget):
         # --- 1. Для контейнеров (QWidget, кроме специальных) ---
         if isinstance(widget, QWidget) and not isinstance(widget, 
                 (QLineEdit, QDateEdit, QPushButton, QTextEdit, QListWidget, QScrollArea)):
-            print(f"      → контейнер, dark_mode={dark_mode}, устанавливаю фон: {dark_mode and '#353535' or '#f5f5f5'}")
+            #print(f"      → контейнер, dark_mode={dark_mode}, устанавливаю фон: {dark_mode and '#353535' or '#f5f5f5'}")
             color = "#353535" if dark_mode else "#f5f5f5"
             widget.setStyleSheet(f"background-color: {color};")
             widget.setAutoFillBackground(True)   # необязательно, но оставим
@@ -1522,7 +1553,270 @@ class DatesTabWidget(BaseTabWidget):
                 return True  # БЛОКИРУЕМ дальнейшую обработку
 
         return super().eventFilter(obj, event)
-        
+    
+class DatesContainer(QWidget):
+    """Контейнер для событий с поддержкой drag and drop"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        for url in event.mimeData().urls():
+            file_path = url.toLocalFile()
+            self.add_event_from_file(file_path)
+
+        event.acceptProposedAction()
+
+    
+class FilesTabWidget(BaseTabWidget):
+    """
+    Вкладка файлов.
+    Хранит список файлов в формате:
+    self.tab.data["items"] = [
+        {
+            "name": "file.txt",
+            "path": "C:/path/file.txt",
+            "size": 12345
+        }
+    ]
+    """
+
+    def __init__(self, tab, node_id, parent=None):
+        super().__init__(tab, parent)
+        self.node_id = node_id
+        self.icon_provider = QFileIconProvider()
+        self.build_ui()
+        self.load_from_model()
+
+    # --------------------------------------------------
+    # Построение интерфейса
+    # --------------------------------------------------
+    def build_ui(self):
+        layout = QVBoxLayout(self)
+
+        # Список файлов
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        layout.addWidget(self.list_widget)
+
+        # Кнопки снизу
+        buttons_layout = QHBoxLayout()
+        self.add_button = QPushButton("Добавить")
+        self.remove_button = QPushButton("Удалить")
+        buttons_layout.addWidget(self.add_button)
+        buttons_layout.addWidget(self.remove_button)
+        layout.addLayout(buttons_layout)
+
+        # Настройка drag and drop
+        self.list_widget.setAcceptDrops(True)
+        self.list_widget.setDragEnabled(True)
+        self.list_widget.setDropIndicatorShown(True)
+        self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.setAcceptDrops(True)
+
+        # Сигналы
+        self.add_button.clicked.connect(self.add_file_dialog)
+        self.remove_button.clicked.connect(self.remove_selected_file)
+        self.list_widget.itemDoubleClicked.connect(self.open_file)
+        self.list_widget.model().rowsMoved.connect(self.on_rows_moved)
+
+    # --------------------------------------------------
+    # Загрузка данных в UI
+    # --------------------------------------------------
+    def load_from_model(self):
+        self.list_widget.clear()
+
+        items = self.tab.data.get("items", [])
+        for file_data in items:
+            file_path = file_data.get("path", "")
+            if not file_path or not os.path.exists(file_path):
+                continue
+            file_info = QFileInfo(str(file_path))
+            icon = self.icon_provider.icon(file_info)
+            size = file_data.get("size", 0)
+            display_name = f"{file_data['name']} ({self.format_size(size)})"
+
+            item = QListWidgetItem(icon, display_name)
+            item.setData(Qt.ItemDataRole.UserRole, file_path)
+            item.setData(Qt.ItemDataRole.UserRole + 1, size)
+            self.list_widget.addItem(item)
+
+        self._dirty = False
+
+    # --------------------------------------------------
+    # Сохранение данных в модель
+    # --------------------------------------------------
+    def save_to_model(self):
+        if not self._dirty:
+            print("💾 FilesTabWidget: нет изменений для сохранения")
+            return
+
+        items = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            path = item.data(Qt.ItemDataRole.UserRole)
+            size = item.data(Qt.ItemDataRole.UserRole + 1)
+            items.append({
+                "name": item.text().split(" (")[0],  # отрезаем размер
+                "path": path,
+                "size": size
+            })
+
+        self.tab.data["items"] = items
+        self._dirty = False
+        print(f"💾 FilesTabWidget: сохранено {len(items)} файлов")
+
+    # --------------------------------------------------
+    # Добавление файла через диалог
+    # --------------------------------------------------
+    def add_file_dialog(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Выберите файл",
+            "",
+            "Все файлы (*)"
+        )
+        if file_path:
+            self.add_file(file_path)
+
+    # --------------------------------------------------
+    # Добавление файла (копирование в папку узла)
+    # --------------------------------------------------
+    def add_file(self, source_path):
+        source_path = Path(source_path)
+        if not source_path.exists():
+            return
+
+        attachments_dir = self.get_node_attachments_dir()
+        destination_path = attachments_dir / source_path.name
+
+        # Если файл уже существует — добавим индекс
+        counter = 1
+        while destination_path.exists():
+            destination_path = attachments_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+            counter += 1
+
+        shutil.copy2(source_path, destination_path)
+
+        # Создаём элемент списка
+        file_info = QFileInfo(str(destination_path))
+        icon = self.icon_provider.icon(file_info)
+        size = destination_path.stat().st_size
+        display_name = f"{destination_path.name} ({self.format_size(size)})"
+
+        item = QListWidgetItem(icon, display_name)
+        item.setData(Qt.ItemDataRole.UserRole, str(destination_path))
+        item.setData(Qt.ItemDataRole.UserRole + 1, size)
+
+        self.list_widget.addItem(item)
+        self.mark_dirty()
+
+    # --------------------------------------------------
+    # Удаление выбранного файла
+    # --------------------------------------------------
+    def remove_selected_file(self):
+        """Удалить выбранный файл после подтверждения"""
+        row = self.list_widget.currentRow()
+        if row < 0:
+            return
+
+        item = self.list_widget.item(row)
+        file_path = item.data(Qt.ItemDataRole.UserRole)
+        file_name = item.text().split(" (")[0]  # отрезаем размер
+
+        # Диалог подтверждения
+        reply = QMessageBox.question(
+            self,
+        "Удаление файла",
+            f"Удалить файл «{file_name}»?\nФайл будет также удалён с диска.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Удаляем физический файл, если он существует
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Файл удалён с диска: {file_path}")
+                except Exception as e:
+                    QMessageBox.warning(self, "Ошибка", f"Не удалось удалить файл:\n{str(e)}")
+            # Удаляем элемент из списка
+            self.list_widget.takeItem(row)
+            self.mark_dirty()
+
+    def delete_all_files(self):
+        """Удалить все файлы этой вкладки с диска (вызывается при удалении вкладки)"""
+        items = self.tab.data.get("items", [])
+        deleted_count = 0
+        for file_data in items:
+            file_path = file_data.get("path")
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    deleted_count += 1
+                    print(f"🗑️ Удалён файл вкладки: {file_path}")
+                except Exception as e:
+                    print(f"❌ Не удалось удалить {file_path}: {e}")
+        if deleted_count:
+            print(f"Удалено файлов: {deleted_count}")
+
+    # --------------------------------------------------
+    # Открытие файла двойным кликом
+    # --------------------------------------------------
+    def open_file(self, item):
+        file_path = item.data(Qt.ItemDataRole.UserRole)
+        if not file_path or not os.path.exists(file_path):
+            QMessageBox.warning(self, "Ошибка", "Файл не найден.")
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
+
+    # --------------------------------------------------
+    # Drag & drop файлов извне
+    # --------------------------------------------------
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        for url in event.mimeData().urls():
+            file_path = url.toLocalFile()
+            if file_path:
+                self.add_file(file_path)
+        event.acceptProposedAction()
+
+    # --------------------------------------------------
+    # Изменение порядка элементов (перетаскивание)
+    # --------------------------------------------------
+    def on_rows_moved(self, *args):
+        self.mark_dirty()
+        # Порядок сохранится при вызове save_to_model
+
+    # --------------------------------------------------
+    # Форматирование размера файла
+    # --------------------------------------------------
+    @staticmethod
+    def format_size(size):
+        for unit in ["B", "KB", "MB", "GB"]:
+            if size < 1024:
+                return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} TB"
+
+    # --------------------------------------------------
+    # Путь к папке вложений текущего узла
+    # --------------------------------------------------
+    def get_node_attachments_dir(self):
+        base_dir = Path("data") / "attachments"
+        node_dir = base_dir / f"node_{self.node_id}"
+        node_dir.mkdir(parents=True, exist_ok=True)
+        return node_dir
 
 
 class TitleEditField(QLineEdit):
@@ -2077,6 +2371,8 @@ class NodeContentEditorDialog(QDialog):
             widget = TodoTabWidget(tab)
         elif tab.tab_type == ContentTabType.DATES:
             widget = DatesTabWidget(tab)
+        elif tab.tab_type == ContentTabType.FILES:
+            widget = FilesTabWidget(tab, self.node.id)
         else:
             widget = QLabel(f"{tab.tab_type.value} — в разработке")
 
@@ -2206,6 +2502,10 @@ class NodeContentEditorDialog(QDialog):
     def delete_tab(self, index):
         widget = self.tabs.widget(index)
         tab = getattr(widget, "_content_tab", None)
+
+        # Если это вкладка с файлами — сначала удаляем все её файлы с диска
+        if isinstance(widget, FilesTabWidget):
+            widget.delete_all_files()
 
         self.tabs.removeTab(index)
 
