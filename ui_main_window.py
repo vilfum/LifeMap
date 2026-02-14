@@ -14,8 +14,6 @@
 Главное окно приложения
 """
 import sys
-import os
-import shutil
 from pathlib import Path
 from typing import Optional, cast
 import json
@@ -34,6 +32,8 @@ from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap,
 from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
 from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
+from core.file_service import FileService
+
 
 
 class PasswordDialog(QDialog):
@@ -97,6 +97,9 @@ class MainWindow(QMainWindow):
         self.db_session = None
         self.current_file = None
         self.password = None
+
+        # Инициализация сервиса для работы с файлами
+        self.file_service = FileService()
         
         # Настройки - загружаем из конфига
         self.dark_mode = self.load_theme_setting()
@@ -406,7 +409,13 @@ class MainWindow(QMainWindow):
                 # 3. Удаляем узел из БД (потомки удалятся каскадно благодаря ON DELETE CASCADE)
                 self.db_session.delete_node(node_id)
                 print(f"Узел {node_id} и все его потомки удалены из БД")
-            
+                # 3.1 Удаляем папки attachments всех удаляемых узлов
+                for descendant_id in all_descendants:
+                    try:
+                        self.file_service.delete_node_folder(descendant_id)
+                    except Exception as e:
+                        print(f"Ошибка удаления папки узла {descendant_id}: {e}")
+
                 # 4. Удаляем все связи и узлы из сцены
                 # 4.1. Собираем все связи, которые нужно удалить
                 edges_to_delete = []
@@ -1587,10 +1596,12 @@ class FilesTabWidget(BaseTabWidget):
         }
     ]
     """
+    from core.file_service import FileService
 
     def __init__(self, tab, node_id, parent=None):
         super().__init__(tab, parent)
         self.node_id = node_id
+        self.file_service = FileService()
         self.icon_provider = QFileIconProvider()
         self.build_ui()
         self.load_from_model()
@@ -1636,7 +1647,8 @@ class FilesTabWidget(BaseTabWidget):
         items = self.tab.data.get("items", [])
         for file_data in items:
             file_path = file_data.get("path", "")
-            if not file_path or not os.path.exists(file_path):
+            #if not file_path or not os.path.exists(file_path):
+            if not file_path or not self.file_service.file_exists(file_path):
                 continue
             file_info = QFileInfo(str(file_path))
             icon = self.icon_provider.icon(file_info)
@@ -1689,23 +1701,40 @@ class FilesTabWidget(BaseTabWidget):
     # --------------------------------------------------
     # Добавление файла (копирование в папку узла)
     # --------------------------------------------------
-    def add_file(self, source_path):
-        source_path = Path(source_path)
-        if not source_path.exists():
-            return
+    #def add_file(self, source_path):
+    #    source_path = Path(source_path)
+    #    if not source_path.exists():
+    #        return
 
-        attachments_dir = self.get_node_attachments_dir()
-        destination_path = attachments_dir / source_path.name
+    #    attachments_dir = self.get_node_attachments_dir()
+    #    destination_path = attachments_dir / source_path.name
 
         # Если файл уже существует — добавим индекс
-        counter = 1
-        while destination_path.exists():
-            destination_path = attachments_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
-            counter += 1
+    #    counter = 1
+    #    while destination_path.exists():
+    #        destination_path = attachments_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
+    #        counter += 1
 
-        shutil.copy2(source_path, destination_path)
+    #    shutil.copy2(source_path, destination_path)
 
         # Создаём элемент списка
+    #    file_info = QFileInfo(str(destination_path))
+    #    icon = self.icon_provider.icon(file_info)
+    #    size = destination_path.stat().st_size
+    #    display_name = f"{destination_path.name} ({self.format_size(size)})"
+
+    #    item = QListWidgetItem(icon, display_name)
+    #    item.setData(Qt.ItemDataRole.UserRole, str(destination_path))
+    #    item.setData(Qt.ItemDataRole.UserRole + 1, size)
+
+    #    self.list_widget.addItem(item)
+    #    self.mark_dirty()
+
+    def add_file(self, source_path):
+        destination_path = self.file_service.add_file(self.node_id, source_path)
+        if not destination_path:
+            return
+
         file_info = QFileInfo(str(destination_path))
         icon = self.icon_provider.icon(file_info)
         size = destination_path.stat().st_size
@@ -1717,6 +1746,7 @@ class FilesTabWidget(BaseTabWidget):
 
         self.list_widget.addItem(item)
         self.mark_dirty()
+
 
     # --------------------------------------------------
     # Удаление выбранного файла
@@ -1741,9 +1771,12 @@ class FilesTabWidget(BaseTabWidget):
 
         if reply == QMessageBox.StandardButton.Yes:
             # Удаляем физический файл, если он существует
-            if file_path and os.path.exists(file_path):
+            #if file_path and os.path.exists(file_path):
+            #    try:
+            #        os.remove(file_path)
+            if file_path:
                 try:
-                    os.remove(file_path)
+                    self.file_service.remove_file(file_path)
                     print(f"🗑️ Файл удалён с диска: {file_path}")
                 except Exception as e:
                     QMessageBox.warning(self, "Ошибка", f"Не удалось удалить файл:\n{str(e)}")
@@ -1757,9 +1790,12 @@ class FilesTabWidget(BaseTabWidget):
         deleted_count = 0
         for file_data in items:
             file_path = file_data.get("path")
-            if file_path and os.path.exists(file_path):
+            #if file_path and os.path.exists(file_path):
+            #    try:
+            #        os.remove(file_path)
+            if file_path:
                 try:
-                    os.remove(file_path)
+                    self.file_service.remove_file(file_path)
                     deleted_count += 1
                     print(f"🗑️ Удалён файл вкладки: {file_path}")
                 except Exception as e:
@@ -1772,7 +1808,8 @@ class FilesTabWidget(BaseTabWidget):
     # --------------------------------------------------
     def open_file(self, item):
         file_path = item.data(Qt.ItemDataRole.UserRole)
-        if not file_path or not os.path.exists(file_path):
+        #if not file_path or not os.path.exists(file_path):
+        if not file_path or not self.file_service.file_exists(file_path):
             QMessageBox.warning(self, "Ошибка", "Файл не найден.")
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
@@ -1812,11 +1849,11 @@ class FilesTabWidget(BaseTabWidget):
     # --------------------------------------------------
     # Путь к папке вложений текущего узла
     # --------------------------------------------------
-    def get_node_attachments_dir(self):
-        base_dir = Path("data") / "attachments"
-        node_dir = base_dir / f"node_{self.node_id}"
-        node_dir.mkdir(parents=True, exist_ok=True)
-        return node_dir
+    #def get_node_attachments_dir(self):
+    #    base_dir = Path("data") / "attachments"
+    #    node_dir = base_dir / f"node_{self.node_id}"
+    #    node_dir.mkdir(parents=True, exist_ok=True)
+    #    return node_dir
 
 
 class TitleEditField(QLineEdit):
