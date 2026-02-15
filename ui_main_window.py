@@ -33,6 +33,8 @@ from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
 from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
 from core.file_service import FileService
+from core.content_service import ContentService
+from core.content_repository import ContentRepository
 
 
 
@@ -1701,34 +1703,6 @@ class FilesTabWidget(BaseTabWidget):
     # --------------------------------------------------
     # Добавление файла (копирование в папку узла)
     # --------------------------------------------------
-    #def add_file(self, source_path):
-    #    source_path = Path(source_path)
-    #    if not source_path.exists():
-    #        return
-
-    #    attachments_dir = self.get_node_attachments_dir()
-    #    destination_path = attachments_dir / source_path.name
-
-        # Если файл уже существует — добавим индекс
-    #    counter = 1
-    #    while destination_path.exists():
-    #        destination_path = attachments_dir / f"{source_path.stem}_{counter}{source_path.suffix}"
-    #        counter += 1
-
-    #    shutil.copy2(source_path, destination_path)
-
-        # Создаём элемент списка
-    #    file_info = QFileInfo(str(destination_path))
-    #    icon = self.icon_provider.icon(file_info)
-    #    size = destination_path.stat().st_size
-    #    display_name = f"{destination_path.name} ({self.format_size(size)})"
-
-    #    item = QListWidgetItem(icon, display_name)
-    #    item.setData(Qt.ItemDataRole.UserRole, str(destination_path))
-    #    item.setData(Qt.ItemDataRole.UserRole + 1, size)
-
-    #    self.list_widget.addItem(item)
-    #    self.mark_dirty()
 
     def add_file(self, source_path):
         destination_path = self.file_service.add_file(self.node_id, source_path)
@@ -1846,14 +1820,6 @@ class FilesTabWidget(BaseTabWidget):
             size /= 1024
         return f"{size:.1f} TB"
 
-    # --------------------------------------------------
-    # Путь к папке вложений текущего узла
-    # --------------------------------------------------
-    #def get_node_attachments_dir(self):
-    #    base_dir = Path("data") / "attachments"
-    #    node_dir = base_dir / f"node_{self.node_id}"
-    #    node_dir.mkdir(parents=True, exist_ok=True)
-    #    return node_dir
 
 
 class TitleEditField(QLineEdit):
@@ -2382,10 +2348,10 @@ class NodeContentEditorDialog(QDialog):
         if not tab_type:
             return
 
-        tab = self.node.content.add_tab(tab_type)
+        tab = ContentService.add_tab(self.node.content, tab_type) 
 
-        if tab not in self.node.content.tabs:
-            self.node.content.tabs.append(tab)
+        #if tab not in self.node.content.tabs:
+        #    self.node.content.tabs.append(tab)
 
         widget = self.create_tab_widget(tab)
         index = self.tabs.addTab(widget, tab.title)
@@ -2421,36 +2387,6 @@ class NodeContentEditorDialog(QDialog):
 
         return widget
     
-    #def save_tab_data(self, widget, tab):
-    #    if tab.tab_type == ContentTabType.TEXT:
-    #        tab.data['text'] = widget.toPlainText()
-    #    elif tab.tab_type == ContentTabType.LIST:
-    #        tab.data['items'] = [widget.item(i).text() for i in range(widget.count())]
-    
-    # Сохранение вкладок узла
-    #def save_node_content(self):
-    #    try:
-    #        # Сохранить данные всех вкладок
-    #        for i in range(self.tabs.count()):
-    #            widget = self.tabs.widget(i)
-    #            tab = getattr(widget, "_content_tab", None)
-    #
-    #            if hasattr(widget, "is_dirty") and widget.is_dirty():
-    #                print(f"🟡 save_node_content: вкладка {i} грязная → сохраняю")
-    #                widget.save_to_model()
-    #                # Для собственных виджетов типа BaseTabWidget
-    #                #widget.save_to_model()
-    #            elif isinstance(widget, QTextEdit) and tab is not None:
-    #                # Сохраняем plain text в модель
-    #                tab.data['text'] = widget.toPlainText()
-    #            elif isinstance(widget, QListWidget) and tab is not None:
-    #                tab.data['items'] = [widget.item(j).text() for j in range(widget.count())]
-    #
-    #        # Сохраняем весь контент узла в БД
-    #        self.node.content.save(self.db_session)
-    #        print("💾 save_node_content: данные узла сохранены")
-    #    except Exception as e:
-    #        print("Ошибка сохранения содержимого узла:", e)
 
     # Улучшенная версия сохранения с поддержкой флага "грязности" и специализированных виджетов
     def save_node_content(self):
@@ -2468,7 +2404,7 @@ class NodeContentEditorDialog(QDialog):
                 else:
                     print(f"⚪ save_node_content: вкладка {i} чистая")
 
-            self.node.content.save(self.db_session)
+            ContentRepository.save(self.node.content, self.db_session)
             print("💾 save_node_content: данные узла сохранены")
 
         except Exception as e:
@@ -2547,7 +2483,7 @@ class NodeContentEditorDialog(QDialog):
         self.tabs.removeTab(index)
 
         if tab:
-            self.node.content.remove_tab(tab.tab_id)
+            ContentService.remove_tab(self.node.content, tab.tab_id)
             self.save_node_content()
 
     # Сохранение перед закрытием
