@@ -888,23 +888,23 @@ class MainWindow(QMainWindow):
         
         event.accept()
 
-    def add_child_node(self, parent_id: int, title: str, x: float, y: float):
-        """Добавление дочернего узла"""
-        try:
-            node = self.db_session.add_node(title, parent_id, x, y)
-            node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
+    #def add_child_node(self, parent_id: int, title: str, x: float, y: float):
+    #    """Добавление дочернего узла"""
+    #    try:
+    #        node = self.db_session.add_node(title, parent_id, x, y)
+    #        node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
 
              # Добавляем связь
-            edge = self.db_session.add_edge(parent_id, node.id)
-            self.scene.add_edge(edge.id, parent_id, node.id)
+    #        edge = self.db_session.add_edge(parent_id, node.id)
+    #        self.scene.add_edge(edge.id, parent_id, node.id)
         
             # Обновляем флаг родителя
-            parent_item = self.scene.nodes.get(parent_id)
-            if parent_item:
-                parent_item.set_has_children(True)
+    #        parent_item = self.scene.nodes.get(parent_id)
+    #        if parent_item:
+    #            parent_item.set_has_children(True)
             
-        except Exception as e:
-            print(f"Ошибка при создании дочернего узла: {e}")
+    #    except Exception as e:
+    #        print(f"Ошибка при создании дочернего узла: {e}")
 
     # ====== УПРАВЛЕНИЕ ТЕМОЙ И КОНФИГОМ ======
     
@@ -953,8 +953,9 @@ class MainWindow(QMainWindow):
 
 class BaseTabWidget(QWidget):
     """Контракт для виджетов вкладок узла"""
-    def __init__(self, tab, parent=None):
+    def __init__(self, node_content, tab, parent=None):
         super().__init__(parent)
+        self.node_content = node_content
         self.tab = tab          # данные вкладки
         self._dirty = False     # изменялась ли вкладка
         self.ensure_data()      # гарантируем, что данные вкладки существуют
@@ -992,8 +993,8 @@ class BaseTabWidget(QWidget):
 
 class TextTabWidget(BaseTabWidget):
     """Виджет для текстовой вкладки"""
-    def __init__(self, tab, parent=None):
-        super().__init__(tab, parent)
+    def __init__(self, node_content, tab, parent=None):
+        super().__init__(node_content, tab, parent)
 
         self.editor = QTextEdit(self)
 
@@ -1027,7 +1028,9 @@ class TextTabWidget(BaseTabWidget):
             print("💾 TextTabWidget: нет изменений для сохранения")
             return  # Если нет изменений, не сохраняем
         
-        self.tab.data["html"] = self.editor.toHtml()
+        #self.tab.data["html"] = self.editor.toHtml()
+        new_data = {"html": self.editor.toHtml()}
+        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
         super().save_to_model()
         self._dirty = False  # Сбрасываем флаг изменений
         print("💾 TextTabWidget: данные сохранены, вкладка очищена")
@@ -1035,8 +1038,8 @@ class TextTabWidget(BaseTabWidget):
 
 class ListTabWidget(BaseTabWidget):
     """Виджет для вкладки со списком"""
-    def __init__(self, tab, parent=None):
-        super().__init__(tab, parent)
+    def __init__(self, node_content, tab, parent=None):
+        super().__init__(node_content, tab, parent)
         
         self.list_widget = QListWidget()
         self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
@@ -1122,13 +1125,17 @@ class ListTabWidget(BaseTabWidget):
             return  # Если нет изменений, не сохраняем
         
         # Собираем все элементы списка
-        items = []
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            items.append(item.text())
+        #items = []
+        #for i in range(self.list_widget.count()):
+        #    item = self.list_widget.item(i)
+        #    items.append(item.text())
         
         # Сохраняем в модель вкладки
-        self.tab.data["items"] = items
+        #self.tab.data["items"] = items
+        items = [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
+        new_data = {"items": items}
+        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
+
         self._dirty = False  # Сбрасываем флаг изменений
         
         print(f"💾 ListTabWidget: сохранено {len(items)} элементов")
@@ -1141,8 +1148,8 @@ class TodoTabWidget(BaseTabWidget):
     - автосохранение
     """
 
-    def __init__(self, content_tab, parent=None):
-        super().__init__(content_tab, parent)
+    def __init__(self, node_content, content_tab, parent=None):
+        super().__init__(node_content, content_tab, parent)
         self.build_ui()
         self.load_from_model()
 
@@ -1247,7 +1254,9 @@ class TodoTabWidget(BaseTabWidget):
         self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
 
-        self.tab.data["items"] = items
+        #self.tab.data["items"] = items
+        new_data = {"items": items}
+        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
         self._dirty = False  # Сбрасываем флаг изменений
         print(f"💾 ListTabWidget: сохранено {len(items)} элементов")
 
@@ -1266,8 +1275,8 @@ class TodoTabWidget(BaseTabWidget):
 
 class DatesTabWidget(BaseTabWidget):
     """Вкладка для хранения дат и событий"""
-    def __init__(self, tab):
-        super().__init__(tab)
+    def __init__(self, node_content, tab):
+        super().__init__(node_content, tab)
         self.build_ui()
         self.load_from_model()
         self.refresh_theme()
@@ -1551,7 +1560,9 @@ class DatesTabWidget(BaseTabWidget):
                 "date": date_edit.date().toString("dd.MM.yyyy")
             })
 
-        self.tab.data["events"] = events
+        #self.tab.data["events"] = events
+        new_data = {"events": events}
+        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
         self._dirty = False
 
         print(f"💾 DatesTabWidget: сохранено {len(events)} событий")
@@ -1600,9 +1611,9 @@ class FilesTabWidget(BaseTabWidget):
     """
     from core.file_service import FileService
 
-    def __init__(self, tab, node_id, parent=None):
-        super().__init__(tab, parent)
-        self.node_id = node_id
+    def __init__(self, node_content, tab, parent=None):
+        super().__init__(node_content, tab, parent)
+        self.node_id = node_content.node_id # берём из node_content
         self.file_service = FileService()
         self.icon_provider = QFileIconProvider()
         self.build_ui()
@@ -1683,7 +1694,9 @@ class FilesTabWidget(BaseTabWidget):
                 "size": size
             })
 
-        self.tab.data["items"] = items
+        #self.tab.data["items"] = items
+        new_data = {"items": items}
+        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
         self._dirty = False
         print(f"💾 FilesTabWidget: сохранено {len(items)} файлов")
 
@@ -2321,7 +2334,8 @@ class NodeContentEditorDialog(QDialog):
                 tab = getattr(widget, "_content_tab", None)
                 if tab:
                     if tab.title != new_title:  # Только если название действительно изменилось
-                        tab.title = new_title
+                        # Используем сервис для переименования
+                        ContentService.rename_tab(self.node.content, tab.tab_id, new_title)
                         # Сохраняем изменение в БД
                         print(f"Сохраняю изменение названия вкладки: {new_title}")
                         self.save_node_content()
@@ -2365,17 +2379,17 @@ class NodeContentEditorDialog(QDialog):
 
     # Создание UI для вкладки (фабрика)
     def create_tab_widget(self, tab: ContentTab):
+        node_content = self.node.content   # объект NodeContent
         if tab.tab_type == ContentTabType.TEXT:
-            # Используем специализированный виджет, чтобы отслеживать изменения
-            widget = TextTabWidget(tab)
+            widget = TextTabWidget(node_content, tab)
         elif tab.tab_type == ContentTabType.LIST:
-            widget = ListTabWidget(tab)
+            widget = ListTabWidget(node_content, tab)
         elif tab.tab_type == ContentTabType.TODO:
-            widget = TodoTabWidget(tab)
+            widget = TodoTabWidget(node_content, tab)
         elif tab.tab_type == ContentTabType.DATES:
-            widget = DatesTabWidget(tab)
+            widget = DatesTabWidget(node_content, tab)
         elif tab.tab_type == ContentTabType.FILES:
-            widget = FilesTabWidget(tab, self.node.id)
+            widget = FilesTabWidget(node_content, tab)
         else:
             widget = QLabel(f"{tab.tab_type.value} — в разработке")
 
