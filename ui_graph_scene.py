@@ -45,6 +45,8 @@ class GraphScene(QGraphicsScene):
         self.nodes = {}  # node_id -> NodeItem
         self.edges = {}  # edge_id -> EdgeItem
         self.node_edges = {}
+
+        self.grid_size = 50
         
         # Состояние
         #self.dragging = False

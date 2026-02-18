@@ -23,6 +23,22 @@
 Точка входа в приложение
 """
 from app import run
+import sys
+import traceback
+
+def main():
+    try:
+        from app import run
+        run()
+    except Exception as e:
+        print("="*60, file=sys.stderr)
+        print("КРИТИЧЕСКАЯ ОШИБКА:", file=sys.stderr)
+        traceback.print_exc()
+        print("="*60, file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    run()
+    main()
+
+#if __name__ == "__main__":
+#    run()

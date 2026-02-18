@@ -13,6 +13,7 @@
 """
 Главное окно приложения
 """
+print("ui_main_window.py loaded")
 import sys
 from pathlib import Path
 from typing import Optional, cast
@@ -35,6 +36,7 @@ from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
 from core.file_service import FileService
 from core.content_service import ContentService
 from core.content_repository import ContentRepository
+from ui.editor_dialog import NodeContentEditorDialog
 
 
 
@@ -43,6 +45,7 @@ class PasswordDialog(QDialog):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        print("PasswordDialog.__init__ start")
         self.setWindowTitle("Карта жизни - Ввод пароля")
         self.setModal(True)
         self.setFixedSize(300, 150)
@@ -76,6 +79,7 @@ class PasswordDialog(QDialog):
         layout.addLayout(button_layout)
         
         self.setLayout(layout)
+        print("PasswordDialog.__init__ end")
     
     def get_password(self) -> str:
         """Получение введенного пароля"""
@@ -92,6 +96,7 @@ class MainWindow(QMainWindow):
     CONFIG_FILE = Path("data/config.json")
     
     def __init__(self):
+        print("MainWindow.__init__ start")
         super().__init__()
         
         # Инициализация
@@ -99,6 +104,10 @@ class MainWindow(QMainWindow):
         self.db_session = None
         self.current_file = None
         self.password = None
+
+        self._login_shown = False
+
+        self.last_node_pos = (0, 0)
 
         # Инициализация сервиса для работы с файлами
         self.file_service = FileService()
@@ -111,6 +120,7 @@ class MainWindow(QMainWindow):
         # Применяем сохраненную тему при инициализации (всегда, с задержкой)
         QTimer.singleShot(50, self.apply_theme)
         self.show_login_dialog()
+        print("MainWindow.__init__ end")
     
     def init_ui(self):
         """Инициализация интерфейса"""
@@ -230,33 +240,68 @@ class MainWindow(QMainWindow):
     
     def show_login_dialog(self):
         """Показать диалог входа"""
-        dialog = PasswordDialog(self)
+        #print("show_login_dialog: start")
+        #dialog = PasswordDialog(self)
+        #print("show_login_dialog: dialog created")
+        #result = dialog.exec()
+        #print(f"show_login_dialog: dialog.exec() returned {result}")
+        #if result == QDialog.DialogCode.Accepted:
+        #    self.password = dialog.get_password()
+        #    print("show_login_dialog: accepted, calling init_database")
+        #    self.init_database()
+        #    if dialog.get_remember():
+        #        print("show_login_dialog: remember checked")
+        #else:
+        #    print("show_login_dialog: rejected, quitting")
+        #    QApplication.quit()
+        #print("show_login_dialog: end")
+        #dialog = PasswordDialog(self)
         
         # Пробуем загрузить сохраненный пароль
-        try:
-            settings_path = Path("data/settings.json")
-            if settings_path.exists():
-                import json
-                with open(settings_path, 'r', encoding='utf-8') as f:
-                    settings = json.load(f)
-                    if 'remember_password' in settings and settings['remember_password']:
+        #try:
+        #    settings_path = Path("data/settings.json")
+        #    if settings_path.exists():
+        #        import json
+        #        with open(settings_path, 'r', encoding='utf-8') as f:
+        #            settings = json.load(f)
+        #            if 'remember_password' in settings and settings['remember_password']:
                         # TODO: Безопасное хранение пароля
-                        pass
-        except:
-            pass
+        #                pass
+        #except:
+        #    pass
         
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.password = dialog.get_password()
-            self.init_database()
+        #if dialog.exec() == QDialog.DialogCode.Accepted:
+        #    self.password = dialog.get_password()
+        #    self.init_database()
             
+        #    if dialog.get_remember():
+        #        # TODO: Сохранить настройку
+        #        pass
+        #else:
+        #    QApplication.quit()
+        if self._login_shown:
+            return
+        self._login_shown = True
+        print("show_login_dialog: start")
+        dialog = PasswordDialog(self)
+        print("show_login_dialog: dialog created")
+        result = dialog.exec()
+        print(f"show_login_dialog: dialog.exec() returned {result}")
+        if result == QDialog.DialogCode.Accepted:
+            self.password = dialog.get_password()
+            print("show_login_dialog: accepted, calling init_database")
+            self.init_database()
             if dialog.get_remember():
                 # TODO: Сохранить настройку
-                pass
+                print("show_login_dialog: remember checked")
         else:
+            print("show_login_dialog: rejected, quitting")
             QApplication.quit()
+        print("show_login_dialog: end")
     
     def init_database(self):
         """Инициализация базы данных"""
+        print("init_database start")
         try:
             self.db_manager = DatabaseManager(password=self.password)
             self.db_session = self.db_manager.get_session()
@@ -275,6 +320,7 @@ class MainWindow(QMainWindow):
                 f"Не удалось загрузить базу данных: {str(e)}"
             )
             QApplication.quit()
+            print("init_database end")
     
     def load_data(self):
         """Загрузка данных из БД"""
@@ -285,6 +331,9 @@ class MainWindow(QMainWindow):
         
         # Загружаем узлы
         nodes = self.db_session.get_all_nodes()
+        if nodes:
+            last = max(nodes, key=lambda n: n.id)
+            self.last_node_pos = (last.position_x, last.position_y)
         node_items = {}
         
         for node in nodes:
@@ -321,8 +370,42 @@ class MainWindow(QMainWindow):
             self, "Новый корневой узел", "Введите название узла:"
         )
         if ok and text:
-            node = self.db_session.add_node(text, None, 0, 0)
-            self.scene.add_node(node.id, node.title, 0, 0, node.color)
+            #node = self.db_session.add_node(text, None, 0, 0)
+            #self.scene.add_node(node.id, node.title, 0, 0, node.color)
+            # Получаем все узлы
+            # Определяем координаты
+            ##if self.last_node_pos == (0, 0) and not self.db_session.get_all_nodes():
+                # Если узлов нет, ставим в центр экрана
+            #    viewport_rect = self.view.viewport().rect()
+            #    center = self.view.mapToScene(viewport_rect.center())
+            #    x, y = center.x(), center.y()
+            #else:
+            #    x, y = self.last_node_pos
+            #    y += 40  # отступ вниз
+        
+            #node = self.db_session.add_node(text, None, x, y)
+            #if node:
+            #    self.scene.add_node(node.id, node.title, x, y, node.color)
+            #    self.last_node_pos = (x, y)
+            #    print(f"add_root_node: created node {node.id} at ({x}, {y})")
+            if not hasattr(self, 'last_node_pos'):
+                self.last_node_pos = (0, 0)
+        
+            if self.last_node_pos == (0, 0) and not self.db_session.get_all_nodes():
+                # Если узлов нет – ставим в центр экрана с привязкой к сетке
+                viewport_rect = self.view.viewport().rect()
+                center = self.view.mapToScene(viewport_rect.center())
+                x, y = self.snap_to_grid(center.x(), center.y())
+            else:
+                # Берём последнюю позицию и смещаем вниз на одну ячейку
+                x, y = self.last_node_pos
+                y += self.scene.grid_size
+                x, y = self.snap_to_grid(x, y)
+        
+            node = self.db_session.add_node(text, None, x, y)
+            if node:
+                self.scene.add_node(node.id, node.title, x, y, node.color)
+                self.last_node_pos = (x, y)
     
     def add_node_at_position(self, x: float, y: float):
         """Добавление узла в указанной позиции"""
@@ -330,45 +413,116 @@ class MainWindow(QMainWindow):
             self, "Новый узел", "Введите название узла:"
         )
         if ok and text:
+            #node = self.db_session.add_node(text, None, x, y)
+            #if node:
+            #    self.scene.add_node(node.id, node.title, x, y, node.color)
+            #    self.last_node_pos = (x, y)
+            x, y = self.snap_to_grid(x, y)
             node = self.db_session.add_node(text, None, x, y)
-            self.scene.add_node(node.id, node.title, x, y, node.color)
+            if node:
+                self.scene.add_node(node.id, node.title, x, y, node.color)
+                self.last_node_pos = (x, y)
     
     def add_child_node(self, parent_id: int, title: str, x: float, y: float):
         """Добавление дочернего узла"""
-        print(f"DEBUG add_child_node: parent_id={parent_id}, title={title}, x={x}, y={y}")
-        print(f"DEBUG scene.nodes keys: {list(self.scene.nodes.keys())}")
-        try:
+        #print(f"DEBUG add_child_node: parent_id={parent_id}, title={title}, x={x}, y={y}")
+        #print(f"DEBUG scene.nodes keys: {list(self.scene.nodes.keys())}")
+        #try:
             # Создаем узел в БД
-            node = self.db_session.add_node(title, parent_id, x, y)
+        #    node = self.db_session.add_node(title, parent_id, x, y)
+        #    if node:
+        #        self.scene.add_node(node.id, node.title, x, y, node.color)
+        #        self.last_node_pos = (x, y)
         
             # Создаем графический элемент узла
-            node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
+        #    node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
         
             # Создаем связь в БД
-            edge = self.db_session.add_edge(parent_id, node.id)
+        #    edge = self.db_session.add_edge(parent_id, node.id)
             # Проверка
+        #    if edge is None:
+        #        print(f"ОШИБКА: Не удалось создать связь в БД между {parent_id} и {node.id}")
+        #        return None
+        
+            # Создаем графический элемент связи
+        #    edge_item = self.scene.add_edge(edge.id, parent_id, node.id)
+        #    if edge_item is None:
+        #        print(f"ОШИБКА: EdgeItem не создан для связи {edge.id}")
+        #        print(f"  from_node_id={parent_id}, to_node_id={node.id}")
+        #        print(f"  from_item exists: {parent_id in self.scene.nodes}")
+        #        print(f"  to_item exists: {node.id in self.scene.nodes}")
+                # Можно попробовать получить узлы напрямую
+        #        from_item = self.scene.nodes.get(parent_id)
+        #        to_item = self.scene.nodes.get(node.id)
+        #        print(f"  from_item: {from_item}")
+        #        print(f"  to_item: {to_item}")
+        
+            # ИСПРАВЛЕНИЕ: ОБНОВЛЯЕМ ФЛАГ has_children 
+        #    parent_item = self.scene.nodes.get(parent_id)
+        #    if parent_item:
+        #        parent_item.set_has_children(True)  # Теперь родитель знает, что у него есть дети
+            
+        #    return node_item
+        
+        #except Exception as e:
+        #    print(f"Ошибка при создании дочернего узла: {e}")
+        #    import traceback
+        #    traceback.print_exc()
+        #    return None
+        print(f"DEBUG add_child_node: parent_id={parent_id}, title={title}, original x={x}, y={y}")
+        print(f"DEBUG scene.nodes keys: {list(self.scene.nodes.keys())}")
+    
+        try:
+            parent_item = self.scene.nodes.get(parent_id)
+            if not parent_item:
+                print(f"ОШИБКА: родительский узел {parent_id} не найден в сцене")
+                return None
+        
+            # Позиция родителя
+            parent_x = parent_item.pos().x()
+            parent_y = parent_item.pos().y()
+        
+            # Размер ячейки сетки (должен быть определён в GraphScene)
+            grid = self.scene.grid_size
+        
+            # Вычисляем позицию дочернего узла: по X как у родителя, по Y + 2 ячейки
+            child_x = round(parent_x / grid) * grid
+            child_y = round((parent_y + 2 * grid) / grid) * grid
+        
+            # Создаём узел в БД
+            node = self.db_session.add_node(title, parent_id, child_x, child_y)
+            if not node:
+                print("ОШИБКА: не удалось создать узел в БД")
+                return None
+        
+            # Добавляем узел на сцену (один раз!)
+            node_item = self.scene.add_node(node.id, node.title, child_x, child_y, node.color)
+        
+            # Создаём связь в БД
+            edge = self.db_session.add_edge(parent_id, node.id)
             if edge is None:
                 print(f"ОШИБКА: Не удалось создать связь в БД между {parent_id} и {node.id}")
                 return None
         
-            # Создаем графический элемент связи
+            # Добавляем связь на сцену
             edge_item = self.scene.add_edge(edge.id, parent_id, node.id)
             if edge_item is None:
                 print(f"ОШИБКА: EdgeItem не создан для связи {edge.id}")
                 print(f"  from_node_id={parent_id}, to_node_id={node.id}")
                 print(f"  from_item exists: {parent_id in self.scene.nodes}")
                 print(f"  to_item exists: {node.id in self.scene.nodes}")
-                # Можно попробовать получить узлы напрямую
                 from_item = self.scene.nodes.get(parent_id)
                 to_item = self.scene.nodes.get(node.id)
                 print(f"  from_item: {from_item}")
                 print(f"  to_item: {to_item}")
         
-            # ИСПРАВЛЕНИЕ: ОБНОВЛЯЕМ ФЛАГ has_children 
-            parent_item = self.scene.nodes.get(parent_id)
-            if parent_item:
-                parent_item.set_has_children(True)  # Теперь родитель знает, что у него есть дети
-            
+            # Обновляем флаг наличия детей у родителя
+            parent_item.set_has_children(True)
+        
+            # Сохраняем позицию для последующих корневых узлов (опционально)
+            self.last_node_pos = (child_x, child_y)
+        
+            print(f"Дочерний узел {node.id} создан на позиции ({child_x}, {child_y})")
             return node_item
         
         except Exception as e:
@@ -376,6 +530,11 @@ class MainWindow(QMainWindow):
             import traceback
             traceback.print_exc()
             return None
+        
+    def snap_to_grid(self, x: float, y: float) -> tuple[float, float]:
+        """Округляет координаты до ближайшего узла сетки"""
+        grid = self.scene.grid_size
+        return (round(x / grid) * grid, round(y / grid) * grid)
     
     def delete_node(self, node_id: int):
         """Удаление узла и всех его потомков"""
@@ -508,7 +667,8 @@ class MainWindow(QMainWindow):
         dialog = NodeContentEditorDialog(
             node,
             self,
-            self.db_session
+            self.db_session,
+            main_window=self
             )
         dialog.exec()
     
@@ -950,1559 +1110,5 @@ class MainWindow(QMainWindow):
         except Exception as e:
             print(f"Ошибка при сохранении конфига: {e}")
 
-
-class BaseTabWidget(QWidget):
-    """Контракт для виджетов вкладок узла"""
-    def __init__(self, node_content, tab, parent=None):
-        super().__init__(parent)
-        self.node_content = node_content
-        self.tab = tab          # данные вкладки
-        self._dirty = False     # изменялась ли вкладка
-        self.ensure_data()      # гарантируем, что данные вкладки существуют
-
-    # Гарантируем, что data всегда существует
-    def ensure_data(self):
-        if self.tab.data is None:
-            self.tab.data = {}
-
-    def mark_dirty(self):
-        if not self._dirty:
-            print(f"✏️ BaseTabWidget: вкладка {self.tab.title} стала грязной")
-        self._dirty = True
-
-    def is_dirty(self):
-        return self._dirty
-
-    def load_from_model(self):
-        pass
-
-    def save_to_model(self):
-        if not self._dirty:
-            return
-
-        html = self.editor.toHtml()
-        self.tab.data["html"] = html
-        self._dirty = False
-
-        print("✅ TextTabWidget: данные сохранены, вкладка очищена")
-
-    # Вызывается при уходе с вкладки
-    def on_deactivate(self):
-        if hasattr(self, "is_dirty") and self.is_dirty():
-            self.save_to_model()
-
-class TextTabWidget(BaseTabWidget):
-    """Виджет для текстовой вкладки"""
-    def __init__(self, node_content, tab, parent=None):
-        super().__init__(node_content, tab, parent)
-
-        self.editor = QTextEdit(self)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.editor)
-
-        # Загружаем содержимое из модели при создании виджета
-        try:
-            self.load_from_model()
-        except Exception:
-            pass
-
-        # Подключаем обработчики событий *после* загрузки,
-        # чтобы программная установка текста не пометила вкладку как изменённую
-        self.editor.textChanged.connect(self.mark_dirty)
-        #self.editor.textChanged.connect(self._on_text_changed)
-
-    #def _on_text_changed(self):
-    #    self._dirty = True
-
-    # Загрузка текста из узла
-    def load_from_model(self):
-        html = self.tab.data.get("html", "")
-        self.editor.setHtml(html)
-        self._dirty = False
-
-    # Сохранение текста в узел
-    def save_to_model(self):
-        if not self._dirty:
-            print("💾 TextTabWidget: нет изменений для сохранения")
-            return  # Если нет изменений, не сохраняем
-        
-        #self.tab.data["html"] = self.editor.toHtml()
-        new_data = {"html": self.editor.toHtml()}
-        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
-        super().save_to_model()
-        self._dirty = False  # Сбрасываем флаг изменений
-        print("💾 TextTabWidget: данные сохранены, вкладка очищена")
-
-
-class ListTabWidget(BaseTabWidget):
-    """Виджет для вкладки со списком"""
-    def __init__(self, node_content, tab, parent=None):
-        super().__init__(node_content, tab, parent)
-        
-        self.list_widget = QListWidget()
-        self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
-        
-        # Подключаем сигнал изменений элементов
-        self.list_widget.itemChanged.connect(self.on_item_changed)
-        # Сигналы для отслеживания перемещений
-        # 1. При изменении данных (включая перемещение)
-        self.list_widget.model().dataChanged.connect(self.on_data_changed)
-        # 2. При изменении структуры (перемещение строк)
-        self.list_widget.model().rowsMoved.connect(self.on_rows_moved)
-        
-        self.add_button = QPushButton("Добавить")
-        self.remove_button = QPushButton("Удалить")
-        
-        # Layout
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.list_widget)
-        
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.add_button)
-        button_layout.addWidget(self.remove_button)
-        layout.addLayout(button_layout)
-        
-        # Подключаем кнопки
-        self.add_button.clicked.connect(self.add_item)
-        self.remove_button.clicked.connect(self.remove_item)
-        
-        # Загружаем данные
-        self.load_from_model()
-
-    def add_item(self):
-        """Добавить новый элемент в список"""
-        item_text = f"Новый элемент {self.list_widget.count() + 1}"
-        item = QListWidgetItem(item_text)
-        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-        self.list_widget.addItem(item)
-        self.list_widget.setCurrentItem(item)
-        self.mark_dirty()  # Помечаем как измененное
-
-    def remove_item(self):
-        """Удалить выбранный элемент из списка"""
-        current_item = self.list_widget.currentItem()
-        if current_item:
-            row = self.list_widget.row(current_item)
-            self.list_widget.takeItem(row)
-            self.mark_dirty()  # Помечаем как измененное
-
-    def on_item_changed(self, item):
-        """Вызывается при изменении текста элемента (редактировании)"""
-        self.mark_dirty()  # Помечаем как измененное
-
-    def on_data_changed(self, topLeft, bottomRight, roles):
-        """Вызывается при изменении данных в модели"""
-        self.mark_dirty()
-
-    def on_rows_moved(self, parent, start, end, destination, row):
-        """Вызывается при перемещении строк (drag and drop)"""
-        self.mark_dirty()
-
-    def load_from_model(self):
-        """Загружает данные из модели в виджет"""
-        items = self.tab.data.get("items", [])
-        
-        # Временно отключаем сигнал, чтобы не вызывать mark_dirty при загрузке
-        self.list_widget.itemChanged.disconnect(self.on_item_changed)
-        
-        self.list_widget.clear()
-        for item_text in items:
-            item = QListWidgetItem(item_text)
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-            self.list_widget.addItem(item)
-        
-        # Включаем сигнал обратно
-        self.list_widget.itemChanged.connect(self.on_item_changed)
-        
-        self._dirty = False  # Сбрасываем флаг изменений после загрузки
-
-    def save_to_model(self):
-        """Сохранить данные из виджета в модель"""
-        if not self._dirty:
-            print("💾 ListTabWidget: нет изменений для сохранения")
-            return  # Если нет изменений, не сохраняем
-        
-        # Собираем все элементы списка
-        #items = []
-        #for i in range(self.list_widget.count()):
-        #    item = self.list_widget.item(i)
-        #    items.append(item.text())
-        
-        # Сохраняем в модель вкладки
-        #self.tab.data["items"] = items
-        items = [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
-        new_data = {"items": items}
-        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
-
-        self._dirty = False  # Сбрасываем флаг изменений
-        
-        print(f"💾 ListTabWidget: сохранено {len(items)} элементов")
-
-
-class TodoTabWidget(BaseTabWidget):
-    """
-    Вкладка TODO:
-    - список задач с чекбоксами
-    - автосохранение
-    """
-
-    def __init__(self, node_content, content_tab, parent=None):
-        super().__init__(node_content, content_tab, parent)
-        self.build_ui()
-        self.load_from_model()
-
-    # Создание интерфейса
-    def build_ui(self):
-        layout = QVBoxLayout(self)
-
-        # Список задач
-        self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        layout.addWidget(self.list_widget)
-
-        # Подключаем сигнал изменений элементов
-        self.list_widget.itemChanged.connect(self.on_item_changed)
-        # Сигналы для отслеживания перемещений
-        # 1. При изменении данных (включая перемещение)
-        self.list_widget.model().dataChanged.connect(self.on_data_changed)
-        # 2. При изменении структуры (перемещение строк)
-        self.list_widget.model().rowsMoved.connect(self.on_rows_moved)
-
-        # Кнопки управления
-        self.add_button = QPushButton("Добавить")
-        self.remove_button = QPushButton("Удалить")
-        
-        # Layout
-        layout.addWidget(self.list_widget)
-        
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.add_button)
-        button_layout.addWidget(self.remove_button)
-        layout.addLayout(button_layout)
-
-        # Разрешаем перетаскивание для изменения порядка задач
-        self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
-        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
-
-        
-        # Сигналы
-        self.add_button.clicked.connect(self.add_item)
-        self.remove_button.clicked.connect(self.remove_item)
-        self.list_widget.itemChanged.connect(self.on_item_changed)
-
-    # Добавление задачи
-    def add_item(self):
-        item_text = f"Новый элемент {self.list_widget.count() + 1}"
-        item = QListWidgetItem(item_text)
-        self.list_widget.addItem(item) 
-        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-        item.setCheckState(Qt.CheckState.Unchecked)
-        self.list_widget.setCurrentItem(item)
-        self.list_widget.editItem(item)
-        self.mark_dirty()  # Помечаем как измененное
-
-    # Удаление задачи
-    def remove_item(self):
-        current_item = self.list_widget.currentItem()
-        if current_item:
-            row = self.list_widget.row(current_item)
-            self.list_widget.takeItem(row)
-            self.mark_dirty()  # Помечаем как измененное
-
-    # Реакция на чекбокс
-    def on_item_changed(self, item):
-        self.mark_dirty()  # Помечаем как измененное
-        # Ничего не делаем здесь
-        # Сохранение произойдёт при деактивации вкладки
-        pass
-
-    # Загрузка данных из модели
-    def load_from_model(self):
-        self.list_widget.clear()
-
-        # Временно отключаем сигнал, чтобы не вызывать mark_dirty при загрузке
-        self.list_widget.itemChanged.disconnect(self.on_item_changed)
-
-        items = self.tab.data.get("items", [])
-        for obj in items:
-            item = QListWidgetItem(obj.get("text", ""))
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEditable)
-            item.setCheckState(Qt.CheckState.Checked if obj.get("done") else Qt.CheckState.Unchecked)
-            self.list_widget.addItem(item)
-
-        # Включаем сигнал обратно
-        self.list_widget.itemChanged.connect(self.on_item_changed)
-        
-        self._dirty = False  # Сбрасываем флаг изменений после загрузки
-
-    # Сохранение данных в модель
-    def save_to_model(self):
-        if not self._dirty:
-            print("💾 ListTabWidget: нет изменений для сохранения")
-            return  # Если нет изменений, не сохраняем
-        
-        # Собираем все элементы списка с их состоянием
-        items = []
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            items.append({
-                "text": item.text(),
-                "done": item.checkState() == Qt.CheckState.Checked
-            })
-        self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
-        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
-
-        #self.tab.data["items"] = items
-        new_data = {"items": items}
-        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
-        self._dirty = False  # Сбрасываем флаг изменений
-        print(f"💾 ListTabWidget: сохранено {len(items)} элементов")
-
-    def on_item_changed(self, item):
-        """Вызывается при изменении текста элемента (редактировании)"""
-        self.mark_dirty()  # Помечаем как измененное
-
-    def on_data_changed(self, topLeft, bottomRight, roles):
-        """Вызывается при изменении данных в модели"""
-        self.mark_dirty()
-
-    def on_rows_moved(self, parent, start, end, destination, row):
-        """Вызывается при перемещении строк (drag and drop)"""
-        self.mark_dirty()
-
-
-class DatesTabWidget(BaseTabWidget):
-    """Вкладка для хранения дат и событий"""
-    def __init__(self, node_content, tab):
-        super().__init__(node_content, tab)
-        self.build_ui()
-        self.load_from_model()
-        self.refresh_theme()
-
-    def build_ui(self):
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)                      # <-- Убираем зазор между scroll и кнопкой
-
-        # Контейнер для событий
-        self.container = QWidget()
-        self.container_layout = QVBoxLayout(self.container)
-        self._apply_theme_to_widget(self.container)
-        self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.container_layout.setContentsMargins(5, 5, 5, 5)
-        self.container_layout.setSpacing(5)
-
-        # Разрешаем перетаскивание для добавления событий
-        self.container.setAcceptDrops(True)
-
-        # ScrollArea
-        self.scroll = QScrollArea()                   # <-- сохраняем как self.scroll
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setWidget(self.container)
-        self.scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-        self.scroll.setContentsMargins(0, 0, 0, 0)    # <-- убираем отступы
-        self._apply_theme_to_widget(self.scroll)      # <-- сразу применяем тему
-
-        main_layout.addWidget(self.scroll)
-
-        # Кнопка добавления
-        self.add_button = QPushButton("Добавить дату")
-        self.add_button.clicked.connect(self.add_event_row)
-        main_layout.addWidget(self.add_button)
-
-    def _apply_theme_to_widget(self, widget):
-        """Применить тему к динамически созданному виджету"""
-        #print(f"   _apply_theme_to_widget: {widget.__class__.__name__}")
-        dialog = self.window()
-        if not dialog:
-            return
-        dark_mode = getattr(dialog, 'dark_mode', False)   # если атрибута нет — светлая тема
-
-        # --- 1. Для контейнеров (QWidget, кроме специальных) ---
-        if isinstance(widget, QWidget) and not isinstance(widget, 
-                (QLineEdit, QDateEdit, QPushButton, QTextEdit, QListWidget, QScrollArea)):
-            #print(f"      → контейнер, dark_mode={dark_mode}, устанавливаю фон: {dark_mode and '#353535' or '#f5f5f5'}")
-            color = "#353535" if dark_mode else "#f5f5f5"
-            widget.setStyleSheet(f"background-color: {color};")
-            widget.setAutoFillBackground(True)   # необязательно, но оставим
-            return
-        
-            # --- 1.1 Для QScrollArea ---
-        elif isinstance(widget, QScrollArea):
-            dialog = self.window()
-            if not dialog or not hasattr(dialog, 'dark_mode'):
-                return
-            dark_mode = dialog.dark_mode
-            color = "#353535" if dark_mode else "#f5f5f5"
-            widget.setStyleSheet(f"QScrollArea {{ background-color: {color}; border: none; }}")
-            widget.viewport().setStyleSheet(f"background-color: {color};")
-            widget.setAutoFillBackground(True)
-            widget.viewport().setAutoFillBackground(True)
-            return
-
-        # --- 2. Для полей ввода и кнопок (оставляем StyleSheet) ---
-        elif isinstance(widget, QLineEdit):
-            if dark_mode:
-                widget.setStyleSheet("""
-                    QLineEdit {
-                        background-color: #252525;
-                        color: white;
-                        border: 1px solid #555;
-                        padding: 3px;
-                    }
-                """)
-            else:
-                widget.setStyleSheet("""
-                    QLineEdit {
-                        background-color: white;
-                        color: black;
-                        border: 1px solid #ccc;
-                        padding: 3px;
-                    }
-                """)
-            widget.setPalette(dialog.palette())
-            widget.setAutoFillBackground(True)
-
-        elif isinstance(widget, QDateEdit):
-            if dark_mode:
-                widget.setStyleSheet("""
-                    QDateEdit {
-                        background-color: #252525;
-                        color: white;
-                        border: 1px solid #555;
-                        padding: 3px;
-                    }
-                    QDateEdit::drop-down {
-                        background-color: #404040;
-                        border: 1px solid #555;
-                    }
-                """)
-            else:
-                widget.setStyleSheet("""
-                    QDateEdit {
-                        background-color: white;
-                        color: black;
-                        border: 1px solid #ccc;
-                        padding: 3px;
-                    }
-                    QDateEdit::drop-down {
-                        background-color: #f0f0f0;
-                        border: 1px solid #ccc;
-                    }
-                """)
-            widget.setPalette(dialog.palette())
-            widget.setAutoFillBackground(True)
-
-        elif isinstance(widget, QPushButton):
-            if dark_mode:
-                widget.setStyleSheet("""
-                    QPushButton {
-                        background-color: #404040;
-                        color: white;
-                        border: 1px solid #555;
-                        padding: 5px;
-                        border-radius: 3px;
-                    }
-                    QPushButton:hover {
-                        background-color: #505050;
-                    }
-                    QPushButton:pressed {
-                        background-color: #606060;
-                    }
-                """)
-            else:
-                widget.setStyleSheet("""
-                    QPushButton {
-                        background-color: #f0f0f0;
-                        color: black;
-                        border: 1px solid #ccc;
-                        padding: 5px;
-                        border-radius: 3px;
-                    }
-                    QPushButton:hover {
-                        background-color: #e0e0e0;
-                    }
-                    QPushButton:pressed {
-                        background-color: #d0d0d0;
-                    }
-                """)
-            widget.setPalette(dialog.palette())
-            widget.setAutoFillBackground(True)
-
-    # Добавление строки события
-    def add_event_row(self, title="", date=None):
-        row_widget = QWidget()
-        self._apply_theme_to_widget(row_widget)
-
-        row_layout = QHBoxLayout(row_widget)
-        row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(5)
-
-        # Поле названия
-        title_edit = QLineEdit()
-        title_edit.installEventFilter(self)
-        #title_edit.returnPressed.connect(lambda: self.finish_title_edit(title_edit))
-        item_text = title if title else f"Событие {self.container_layout.count() + 1}"
-        title_edit.setPlaceholderText("Название события")
-        title_edit.setText(item_text)
-        self._apply_theme_to_widget(title_edit)
-
-        # Поле даты
-        date_edit = QDateEdit()
-        date_edit.setCalendarPopup(True)
-        date_edit.setDisplayFormat("dd.MM.yyyy")
-
-        if date:
-            date_edit.setDate(date)
-        else:
-            date_edit.setDate(QDate.currentDate())
-        self._apply_theme_to_widget(date_edit)
-
-        # Кнопка удаления
-        remove_button = QPushButton("Удалить дату")
-        #remove_button.setFixedWidth(30)
-        self._apply_theme_to_widget(remove_button)
-
-        # Добавляем в layout
-        row_layout.addWidget(title_edit, 1)
-        row_layout.addWidget(date_edit)
-        row_layout.addWidget(remove_button)
-
-        # Добавляем строку в контейнер
-        self.container_layout.addWidget(row_widget)
-
-        # Подключения
-        title_edit.textChanged.connect(self.mark_dirty)
-        date_edit.dateChanged.connect(self.mark_dirty)
-
-        remove_button.clicked.connect(lambda: self.remove_event_row(row_widget))
-
-        self.mark_dirty()
-
-    # Удаление строки события
-    def remove_event_row(self, row_widget):
-        row_widget.setParent(None)
-        row_widget.deleteLater()
-        self.mark_dirty()
-
-    # Обновление темы для всех строк событий
-    def refresh_theme(self):
-        """Обновить тему для всех элементов вкладки"""
-        # Обновляем фон самой вкладки
-        self._apply_theme_to_widget(self)
-        # Обновляем фон контейнера
-        self._apply_theme_to_widget(self.container)
-        # Обновляем фон скролл-области
-        if hasattr(self, 'scroll'):
-            self._apply_theme_to_widget(self.scroll)
-
-        # Обновляем каждую строку событий
-        for i in range(self.container_layout.count()):
-            item = self.container_layout.itemAt(i)
-            if not item:
-                continue
-            row_widget = item.widget()
-            if not row_widget:
-                continue
-
-            # Обновляем фон самой строки
-            self._apply_theme_to_widget(row_widget)
-
-            # Обновляем дочерние виджеты в строке
-            layout = row_widget.layout()
-            if layout:
-                for j in range(layout.count()):
-                    w = layout.itemAt(j).widget()
-                    if w:
-                        self._apply_theme_to_widget(w)
-
-    # Работа с моделью
-    def load_from_model(self):
-        # Очистка контейнера
-        while self.container_layout.count():
-            item = self.container_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-        events = self.tab.data.get("events", [])
-        for event in events:
-            title = event.get("title", "")
-            date_str = event.get("date")
-
-            date = QDate.fromString(date_str, "dd.MM.yyyy")
-            if not date.isValid():
-                date = QDate.currentDate()
-
-            self.add_event_row(title, date)
-
-        self._dirty = False
-
-    def save_to_model(self):
-        if not self._dirty:
-            print("💾 ListTabWidget: нет изменений для сохранения")
-            return  # Если нет изменений, не сохраняем
-        
-        events = []
-        for i in range(self.container_layout.count()):
-            row = self.container_layout.itemAt(i).widget()
-            if not row:
-                continue
-
-            layout = row.layout()
-
-            title_edit = layout.itemAt(0).widget()
-            date_edit = layout.itemAt(1).widget()
-
-            events.append({
-                "title": title_edit.text(),
-                "date": date_edit.date().toString("dd.MM.yyyy")
-            })
-
-        #self.tab.data["events"] = events
-        new_data = {"events": events}
-        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
-        self._dirty = False
-
-        print(f"💾 DatesTabWidget: сохранено {len(events)} событий")
-
-    def eventFilter(self, obj, event):
-        if isinstance(obj, QLineEdit) and event.type() == event.Type.KeyPress:
-            if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-                obj.clearFocus()
-                self.mark_dirty()
-                return True  # БЛОКИРУЕМ дальнейшую обработку
-
-        return super().eventFilter(obj, event)
-    
-class DatesContainer(QWidget):
-    """Контейнер для событий с поддержкой drag and drop"""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAcceptDrops(True)
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-
-    def dropEvent(self, event):
-        for url in event.mimeData().urls():
-            file_path = url.toLocalFile()
-            self.add_event_from_file(file_path)
-
-        event.acceptProposedAction()
-
-    
-class FilesTabWidget(BaseTabWidget):
-    """
-    Вкладка файлов.
-    Хранит список файлов в формате:
-    self.tab.data["items"] = [
-        {
-            "name": "file.txt",
-            "path": "C:/path/file.txt",
-            "size": 12345
-        }
-    ]
-    """
-    from core.file_service import FileService
-
-    def __init__(self, node_content, tab, parent=None):
-        super().__init__(node_content, tab, parent)
-        self.node_id = node_content.node_id # берём из node_content
-        self.file_service = FileService()
-        self.icon_provider = QFileIconProvider()
-        self.build_ui()
-        self.load_from_model()
-
-    # --------------------------------------------------
-    # Построение интерфейса
-    # --------------------------------------------------
-    def build_ui(self):
-        layout = QVBoxLayout(self)
-
-        # Список файлов
-        self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        layout.addWidget(self.list_widget)
-
-        # Кнопки снизу
-        buttons_layout = QHBoxLayout()
-        self.add_button = QPushButton("Добавить")
-        self.remove_button = QPushButton("Удалить")
-        buttons_layout.addWidget(self.add_button)
-        buttons_layout.addWidget(self.remove_button)
-        layout.addLayout(buttons_layout)
-
-        # Настройка drag and drop
-        self.list_widget.setAcceptDrops(True)
-        self.list_widget.setDragEnabled(True)
-        self.list_widget.setDropIndicatorShown(True)
-        self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
-        self.setAcceptDrops(True)
-
-        # Сигналы
-        self.add_button.clicked.connect(self.add_file_dialog)
-        self.remove_button.clicked.connect(self.remove_selected_file)
-        self.list_widget.itemDoubleClicked.connect(self.open_file)
-        self.list_widget.model().rowsMoved.connect(self.on_rows_moved)
-
-    # --------------------------------------------------
-    # Загрузка данных в UI
-    # --------------------------------------------------
-    def load_from_model(self):
-        self.list_widget.clear()
-
-        items = self.tab.data.get("items", [])
-        for file_data in items:
-            file_path = file_data.get("path", "")
-            #if not file_path or not os.path.exists(file_path):
-            if not file_path or not self.file_service.file_exists(file_path):
-                continue
-            file_info = QFileInfo(str(file_path))
-            icon = self.icon_provider.icon(file_info)
-            size = file_data.get("size", 0)
-            display_name = f"{file_data['name']} ({self.format_size(size)})"
-
-            item = QListWidgetItem(icon, display_name)
-            item.setData(Qt.ItemDataRole.UserRole, file_path)
-            item.setData(Qt.ItemDataRole.UserRole + 1, size)
-            self.list_widget.addItem(item)
-
-        self._dirty = False
-
-    # --------------------------------------------------
-    # Сохранение данных в модель
-    # --------------------------------------------------
-    def save_to_model(self):
-        if not self._dirty:
-            print("💾 FilesTabWidget: нет изменений для сохранения")
-            return
-
-        items = []
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            path = item.data(Qt.ItemDataRole.UserRole)
-            size = item.data(Qt.ItemDataRole.UserRole + 1)
-            items.append({
-                "name": item.text().split(" (")[0],  # отрезаем размер
-                "path": path,
-                "size": size
-            })
-
-        #self.tab.data["items"] = items
-        new_data = {"items": items}
-        ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
-        self._dirty = False
-        print(f"💾 FilesTabWidget: сохранено {len(items)} файлов")
-
-    # --------------------------------------------------
-    # Добавление файла через диалог
-    # --------------------------------------------------
-    def add_file_dialog(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Выберите файл",
-            "",
-            "Все файлы (*)"
-        )
-        if file_path:
-            self.add_file(file_path)
-
-    # --------------------------------------------------
-    # Добавление файла (копирование в папку узла)
-    # --------------------------------------------------
-
-    def add_file(self, source_path):
-        destination_path = self.file_service.add_file(self.node_id, source_path)
-        if not destination_path:
-            return
-
-        file_info = QFileInfo(str(destination_path))
-        icon = self.icon_provider.icon(file_info)
-        size = destination_path.stat().st_size
-        display_name = f"{destination_path.name} ({self.format_size(size)})"
-
-        item = QListWidgetItem(icon, display_name)
-        item.setData(Qt.ItemDataRole.UserRole, str(destination_path))
-        item.setData(Qt.ItemDataRole.UserRole + 1, size)
-
-        self.list_widget.addItem(item)
-        self.mark_dirty()
-
-
-    # --------------------------------------------------
-    # Удаление выбранного файла
-    # --------------------------------------------------
-    def remove_selected_file(self):
-        """Удалить выбранный файл после подтверждения"""
-        row = self.list_widget.currentRow()
-        if row < 0:
-            return
-
-        item = self.list_widget.item(row)
-        file_path = item.data(Qt.ItemDataRole.UserRole)
-        file_name = item.text().split(" (")[0]  # отрезаем размер
-
-        # Диалог подтверждения
-        reply = QMessageBox.question(
-            self,
-        "Удаление файла",
-            f"Удалить файл «{file_name}»?\nФайл будет также удалён с диска.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            # Удаляем физический файл, если он существует
-            #if file_path and os.path.exists(file_path):
-            #    try:
-            #        os.remove(file_path)
-            if file_path:
-                try:
-                    self.file_service.remove_file(file_path)
-                    print(f"🗑️ Файл удалён с диска: {file_path}")
-                except Exception as e:
-                    QMessageBox.warning(self, "Ошибка", f"Не удалось удалить файл:\n{str(e)}")
-            # Удаляем элемент из списка
-            self.list_widget.takeItem(row)
-            self.mark_dirty()
-
-    def delete_all_files(self):
-        """Удалить все файлы этой вкладки с диска (вызывается при удалении вкладки)"""
-        items = self.tab.data.get("items", [])
-        deleted_count = 0
-        for file_data in items:
-            file_path = file_data.get("path")
-            #if file_path and os.path.exists(file_path):
-            #    try:
-            #        os.remove(file_path)
-            if file_path:
-                try:
-                    self.file_service.remove_file(file_path)
-                    deleted_count += 1
-                    print(f"🗑️ Удалён файл вкладки: {file_path}")
-                except Exception as e:
-                    print(f"❌ Не удалось удалить {file_path}: {e}")
-        if deleted_count:
-            print(f"Удалено файлов: {deleted_count}")
-
-    # --------------------------------------------------
-    # Открытие файла двойным кликом
-    # --------------------------------------------------
-    def open_file(self, item):
-        file_path = item.data(Qt.ItemDataRole.UserRole)
-        #if not file_path or not os.path.exists(file_path):
-        if not file_path or not self.file_service.file_exists(file_path):
-            QMessageBox.warning(self, "Ошибка", "Файл не найден.")
-            return
-        QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
-
-    # --------------------------------------------------
-    # Drag & drop файлов извне
-    # --------------------------------------------------
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-
-    def dropEvent(self, event):
-        for url in event.mimeData().urls():
-            file_path = url.toLocalFile()
-            if file_path:
-                self.add_file(file_path)
-        event.acceptProposedAction()
-
-    # --------------------------------------------------
-    # Изменение порядка элементов (перетаскивание)
-    # --------------------------------------------------
-    def on_rows_moved(self, *args):
-        self.mark_dirty()
-        # Порядок сохранится при вызове save_to_model
-
-    # --------------------------------------------------
-    # Форматирование размера файла
-    # --------------------------------------------------
-    @staticmethod
-    def format_size(size):
-        for unit in ["B", "KB", "MB", "GB"]:
-            if size < 1024:
-                return f"{size:.1f} {unit}"
-            size /= 1024
-        return f"{size:.1f} TB"
-
-
-
-class TitleEditField(QLineEdit):
-    """Редактор названия узла с автозавершением при потере фокуса или Enter"""
-    def __init__(self, text, finish_callback, parent=None):
-        super().__init__(text, parent)
-        self.finish_callback = finish_callback
-        self._is_finishing = False
-        self.should_save = True  # Флаг: сохранять ли при завершении
-    
-    def focusOutEvent(self, event):
-        """Завершить редактирование при потере фокуса"""
-        if not self._is_finishing:
-            self._is_finishing = True
-            self.should_save = True  # При потере фокуса - сохраняем
-            # Даём время для обработки других событий
-            QTimer.singleShot(0, self._complete_edit)
-        super().focusOutEvent(event)
-    
-    def _complete_edit(self):
-        """Выполнить завершение редактирования"""
-        self.finish_callback(save=self.should_save)
-        self._is_finishing = False
-    
-    def keyPressEvent(self, event):
-        """Обработать Enter и Escape"""
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-            # Enter - сохраняем и закрываем
-            if not self._is_finishing:
-                self._is_finishing = True
-                self.should_save = True
-                self.finish_callback(save=True)
-                self._is_finishing = False
-            event.accept()
-        elif event.key() == Qt.Key.Key_Escape:
-            # Escape - просто закрываем БЕЗ сохранения
-            if not self._is_finishing:
-                self._is_finishing = True
-                self.should_save = False
-                self.finish_callback(save=False)
-                self._is_finishing = False
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-
-class TabRenameEditField(QLineEdit):
-    """Редактор названия вкладки с автозавершением при потере фокуса или Enter"""
-    def __init__(self, text, finish_callback, parent=None):
-        super().__init__(text, parent)
-        self.finish_callback = finish_callback
-        self._is_finishing = False
-        self.should_save = True  # Флаг: сохранять ли при завершении
-    
-    def focusOutEvent(self, event):
-        """Завершить редактирование при потере фокуса"""
-        if not self._is_finishing:
-            self._is_finishing = True
-            self.should_save = True  # При потере фокуса - сохраняем
-            # Даём время для обработки других событий
-            QTimer.singleShot(0, self._complete_edit)
-        super().focusOutEvent(event)
-    
-    def _complete_edit(self):
-        """Выполнить завершение редактирования"""
-        self.finish_callback(save=self.should_save)
-        self._is_finishing = False
-    
-    def mousePressEvent(self, event):
-        """При клике в самом поле - продолжать редактирование"""
-        super().mousePressEvent(event)
-        event.accept()
-    
-    def keyPressEvent(self, event):
-        """Обработать Enter и Escape"""
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-            # Enter - сохраняем и закрываем
-            if not self._is_finishing:
-                self._is_finishing = True
-                self.should_save = True
-                self.finish_callback(save=True)
-                self._is_finishing = False
-            event.accept()
-        elif event.key() == Qt.Key.Key_Escape:
-            # Escape - просто закрываем БЕЗ сохранения
-            if not self._is_finishing:
-                self._is_finishing = True
-                self.should_save = False
-                self.finish_callback(save=False)
-                self._is_finishing = False
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-
-class NodeContentEditorDialog(QDialog):
-    def __init__(self, node, parent=None, db_session=None):
-        super().__init__(parent)
-        self.node = node
-        self.db_session = db_session
-        self.setWindowTitle("Содержимое узла")
-        self.resize(800, 600)
-
-        # ====== ИНИЦИАЛИЗАЦИЯ ФЛАГОВ ======
-        self._editing_title = False
-        self._tab_edit_active = False
-
-        # ====== ВИДЖЕТЫ ======
-
-        # Название
-        self.title_label = QLabel(self.node.title)
-        self.title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
-
-        self.title_edit = TitleEditField(self.node.title, self.finish_title_edit)
-        self.title_edit.setVisible(False)
-        self.title_edit.setStyleSheet("font-size: 18px;")
-
-        self.edit_title_button = QPushButton("✏️")
-        self.edit_title_button.setFixedSize(28, 28)
-        self.edit_title_button.setToolTip("Изменить название узла")
-
-        # Вкладки
-        self.tabs = QTabWidget()
-        self.tabs.setTabsClosable(False)
-        self._current_tab_widget = None
-
-        # Кнопка добавления вкладки
-        self.add_tab_button = QPushButton("Добавить вкладку")
-        #self.add_tab_button.setFixedSize(28, 28)
-        self.add_tab_button.setToolTip("Добавить вкладку")
-
-        self.add_tab_menu = QMenu(self)
-        self.add_tab_menu.addAction("Текст")
-        self.add_tab_menu.addAction("Файлы")
-        self.add_tab_menu.addAction("Список")
-        self.add_tab_menu.addAction("Список дел")
-        self.add_tab_menu.addAction("Даты")
-
-        self.add_tab_button.setMenu(self.add_tab_menu)
-
-        # Обработчики для меню добавления вкладок
-        self.add_tab_menu.triggered.connect(self.add_tab)
-
-        # Переменные для отслеживания состояния
-        self._previous_tab_widget = None # Виджет предыдущей вкладки, чтобы сохранять данные при переключении
-        self._is_saving = False  # Флаг для предотвращения рекурсии при сохранении
-
-        # ====== СБОРКА UI ======
-        self._build_ui()
-
-        # ====== СИГНАЛЫ ======
-        self.edit_title_button.clicked.connect(self.start_title_edit)
-        # TitleEditField уже подключает editingFinished и returnPressed через _on_finish
-        self.tabs.currentChanged.connect(self.on_tab_changed)
-        self.tabs.tabBar().tabBarDoubleClicked.connect(self.start_rename_tab)
-
-        # Загрузка существующих вкладок
-        for tab in self.node.content.tabs:
-            widget = self.create_tab_widget(tab)
-            self.tabs.addTab(widget, tab.title)
-
-        # Применяем тему от родительского окна
-        self.apply_theme()
-
-        self.finished.connect(lambda: self.save_node_content())
-
-        
-    def get_main_window(self):
-        """Получить экземпляр MainWindow, обходя родителей"""
-        parent = self.parent()
-        while parent:
-            if isinstance(parent, MainWindow):
-                return parent
-            parent = parent.parent()
-        return None
-
-    def apply_theme(self):
-        """Применить тему на основе родительского MainWindow"""
-        main_window = self.get_main_window()
-        if not main_window:
-            return
-
-        self.dark_mode = main_window.dark_mode   # <-- СОХРАНЯЕМ ТЕМУ В ДИАЛОГЕ
-        dark_mode = main_window.dark_mode if hasattr(main_window, 'dark_mode') else False
-        app = QApplication.instance()
-    
-        # Копируем палитру и стиль приложения (базовые настройки)
-        self.setPalette(app.palette())
-        self.setStyle(app.style())
-    
-        # --- ЯВНЫЕ СТИЛИ ДЛЯ ВСЕХ ВИДЖЕТОВ ДИАЛОГА ---
-        if dark_mode:
-            self.setStyleSheet("""
-                NodeContentEditorDialog {
-                    background-color: #353535;
-                    color: white;
-                }
-                NodeContentEditorDialog QLabel {
-                    color: white;
-                    background-color: transparent;
-                }
-                NodeContentEditorDialog QLineEdit {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                    padding: 3px;
-                }
-                NodeContentEditorDialog QTextEdit {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                }
-                NodeContentEditorDialog QListWidget {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                }
-                NodeContentEditorDialog QListWidget::item:selected {
-                    background-color: #2a82da;
-                    color: white;
-                }
-                NodeContentEditorDialog QPushButton {
-                    background-color: #404040;
-                    color: white;
-                    border: 1px solid #555;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                NodeContentEditorDialog QPushButton:hover {
-                    background-color: #505050;
-                }
-                NodeContentEditorDialog QPushButton:pressed {
-                    background-color: #606060;
-                }
-                NodeContentEditorDialog QTabWidget::pane {
-                    border: 1px solid #555;
-                    background-color: #353535;
-                }
-                NodeContentEditorDialog QTabBar::tab {
-                    background-color: #404040;
-                    color: white;
-                    padding: 8px 15px;
-                    margin-right: 2px;
-                    border-top-left-radius: 4px;
-                    border-top-right-radius: 4px;
-                }
-                NodeContentEditorDialog QTabBar::tab:selected {
-                    background-color: #505050;
-                }
-                NodeContentEditorDialog QTabBar::tab:hover:!selected {
-                    background-color: #454545;
-                }
-                NodeContentEditorDialog QDateEdit {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                    padding: 3px;
-                }
-                
-                NodeContentEditorDialog QMenu {
-                    background-color: #353535;
-                    color: white;
-                    border: 1px solid #555;
-                }
-                NodeContentEditorDialog QMenu::item:selected {
-                    background-color: #2a82da;
-                }
-            """)
-        else:
-            self.setStyleSheet("""
-                NodeContentEditorDialog {
-                    background-color: #f5f5f5;
-                    color: black;
-                }
-                NodeContentEditorDialog QLabel {
-                    color: black;
-                    background-color: transparent;
-                }
-                NodeContentEditorDialog QLineEdit {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                    padding: 3px;
-                }
-                NodeContentEditorDialog QTextEdit {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                }
-                NodeContentEditorDialog QListWidget {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                }
-                NodeContentEditorDialog QListWidget::item:selected {
-                    background-color: #e0e0e0;
-                    color: black;
-                }
-                NodeContentEditorDialog QPushButton {
-                    background-color: #f0f0f0;
-                    color: black;
-                    border: 1px solid #ccc;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                NodeContentEditorDialog QPushButton:hover {
-                    background-color: #e0e0e0;
-                }
-                NodeContentEditorDialog QPushButton:pressed {
-                    background-color: #d0d0d0;
-                }
-                NodeContentEditorDialog QTabWidget::pane {
-                    border: 1px solid #ccc;
-                    background-color: #f5f5f5;
-                }
-                NodeContentEditorDialog QTabBar::tab {
-                    background-color: #e0e0e0;
-                    color: black;
-                    padding: 8px 15px;
-                    margin-right: 2px;
-                    border-top-left-radius: 4px;
-                    border-top-right-radius: 4px;
-                }
-                NodeContentEditorDialog QTabBar::tab:selected {
-                    background-color: #d0d0d0;
-                }
-                NodeContentEditorDialog QTabBar::tab:hover:!selected {
-                    background-color: #d0d0d0;
-                }
-                NodeContentEditorDialog QDateEdit {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                    padding: 3px;
-                }
-                
-                NodeContentEditorDialog QMenu {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                }
-                NodeContentEditorDialog QMenu::item:selected {
-                    background-color: #e0e0e0;
-                }
-           """)
-        # Обновляем тему во всех вкладках
-        for i in range(self.tabs.count()):
-            widget = self.tabs.widget(i)
-            if hasattr(widget, 'refresh_theme'):
-                widget.refresh_theme()
-                
-
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setAutoFillBackground(True)
-        self.update()
-        # Принудительно обновляем геометрию и перерисовываем
-        self.update()
-        self.repaint()
-        QApplication.processEvents()
-    
-
-    def _build_ui(self):
-        main_layout = QVBoxLayout(self)
-
-        # --- Шапка ---
-        header_layout = QHBoxLayout()
-
-        title_container = QWidget()
-        title_layout = QHBoxLayout(title_container)
-        title_layout.setContentsMargins(0, 0, 0, 0)
-
-        title_layout.addWidget(self.title_label)
-        title_layout.addWidget(self.title_edit)
-        title_layout.addWidget(self.edit_title_button)
-
-        header_layout.addWidget(title_container)
-        header_layout.addStretch()
-
-        main_layout.addLayout(header_layout)
-
-        # --- Панель вкладок + кнопка ---
-        tabs_header = QHBoxLayout()
-        tabs_header.addStretch()
-        tabs_header.addWidget(self.add_tab_button)
-
-        main_layout.addLayout(tabs_header)
-        main_layout.addWidget(self.tabs)
-
-        # Контекстное меню вкладок
-        self.tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.tabs.customContextMenuRequested.connect(self.on_tab_context_menu)
-        
-        # Установим event filter для перехвата кликов
-        self.tabs.installEventFilter(self)
-
-    # ====== ЛОГИКА ======
-
-    def start_title_edit(self):
-        # Логика переключения: если поле видно - закрыть его, если скрыто - открыть
-        if self.title_edit.isVisible():
-            # Поле видно - сохранить и закрыть
-            self.finish_title_edit()
-        else:
-            # Поле скрыто - открыть для редактирования
-            self.title_label.setVisible(False)
-            self.title_edit.setVisible(True)
-            self._editing_title = True
-            self.title_edit.setText(self.node.title)
-            self.title_edit.setFocus()
-            # Выделяем текст в отдельном вызове после setFocus
-            QTimer.singleShot(0, self.title_edit.selectAll)
-
-    # Сохранение нового названия узла
-    def finish_title_edit(self, save=True):
-        # Проверяем флаг, чтобы не обрабатывать дважды
-        if not hasattr(self, "_editing_title") or not self._editing_title:
-            # Если не в режиме редактирования, просто скрыть поле
-            self.title_edit.setVisible(False)
-            self.title_label.setVisible(True)
-            return
-        
-        self._editing_title = False
-        
-        if save:
-            new_title = self.title_edit.text().strip()
-            if new_title:
-                if new_title != self.node.title:
-                    self.node.title = new_title
-                    self.title_label.setText(new_title)
-
-                    # --- СОХРАНЕНИЕ В БД ---
-                    try:
-                        parent = cast(MainWindow, self.parent())
-                        parent.db_session.update_node_title(self.node.id, new_title)
-                        
-                        # Обновляем название в сцене
-                        node_item = parent.scene.nodes.get(self.node.id)
-                        if node_item:
-                            node_item.title = new_title
-                            node_item.update_appearance()
-                            
-                    except Exception as e:
-                        print("Ошибка сохранения названия узла:", e)
-                else:
-                    # Название не изменилось - просто обновляем label
-                    self.title_label.setText(self.node.title)
-        else:
-            # Отмена - восстанавливаем исходное название
-            self.title_label.setText(self.node.title)
-
-        # Скрываем поле редактирования и показываем label
-        self.title_edit.setVisible(False)
-        self.title_label.setVisible(True)
-
-    def start_rename_tab(self, index):
-        if index < 0:
-            return
-
-        # Проверяем, может ли быть максимально одно поле редактирования одновременно
-        # Если уже открыто другое поле - закрыть его
-        existing_edit = getattr(self, "_tab_rename_edit", None)
-        if existing_edit is not None:
-            self.finish_rename_tab()
-
-        tab_bar = self.tabs.tabBar()
-        rect = tab_bar.tabRect(index)
-
-        # Создаем поле редактирования
-        self._tab_rename_edit = TabRenameEditField(self.tabs.tabText(index), self.finish_rename_tab, tab_bar)
-        self._tab_rename_edit.setGeometry(rect)
-        self._tab_rename_edit.show()
-        self._tab_rename_edit.setFocus()
-        # Выделяем текст в отдельном вызове после setFocus
-        QTimer.singleShot(0, self._tab_rename_edit.selectAll)
-
-        self._renaming_tab_index = index
-        self._tab_edit_active = True
-
-    def finish_rename_tab(self, save=True):
-        # Проверяем флаг, чтобы не обрабатывать дважды
-        if not getattr(self, "_tab_edit_active", False):
-            return
-            
-        self._tab_edit_active = False
-        
-        edit = getattr(self, "_tab_rename_edit", None)
-        if edit is None:
-            return
-
-        # Сохраняем данные ДО удаления виджета
-        if save:
-            new_title = edit.text().strip()
-            index = self._renaming_tab_index
-
-            if new_title:
-                self.tabs.setTabText(index, new_title)
-
-                widget = self.tabs.widget(index)
-                tab = getattr(widget, "_content_tab", None)
-                if tab:
-                    if tab.title != new_title:  # Только если название действительно изменилось
-                        # Используем сервис для переименования
-                        ContentService.rename_tab(self.node.content, tab.tab_id, new_title)
-                        # Сохраняем изменение в БД
-                        print(f"Сохраняю изменение названия вкладки: {new_title}")
-                        self.save_node_content()
-
-        # Удаляем редактор
-        if edit:
-            edit.blockSignals(True)  # Блокируем сигналы перед удалением
-            edit.hide()
-            edit.deleteLater()
-        if hasattr(self, "_tab_rename_edit"):
-            del self._tab_rename_edit
-
-    def add_tab(self, action):
-        """Добавление новой вкладки"""
-        tab_type_map = {
-            "Текст": ContentTabType.TEXT,
-            "Файлы": ContentTabType.FILES,
-            "Список": ContentTabType.LIST,
-            "Список дел": ContentTabType.TODO,
-            "Даты": ContentTabType.DATES,
-        }
-
-        tab_type = tab_type_map.get(action.text())
-        if not tab_type:
-            return
-
-        tab = ContentService.add_tab(self.node.content, tab_type) 
-
-        #if tab not in self.node.content.tabs:
-        #    self.node.content.tabs.append(tab)
-
-        widget = self.create_tab_widget(tab)
-        index = self.tabs.addTab(widget, tab.title)
-        self.tabs.setCurrentIndex(index)
-
-        # Применяем тему к новой вкладке
-        if hasattr(widget, 'refresh_theme'):
-            widget.refresh_theme()
-
-        self.save_node_content()
-
-    # Создание UI для вкладки (фабрика)
-    def create_tab_widget(self, tab: ContentTab):
-        node_content = self.node.content   # объект NodeContent
-        if tab.tab_type == ContentTabType.TEXT:
-            widget = TextTabWidget(node_content, tab)
-        elif tab.tab_type == ContentTabType.LIST:
-            widget = ListTabWidget(node_content, tab)
-        elif tab.tab_type == ContentTabType.TODO:
-            widget = TodoTabWidget(node_content, tab)
-        elif tab.tab_type == ContentTabType.DATES:
-            widget = DatesTabWidget(node_content, tab)
-        elif tab.tab_type == ContentTabType.FILES:
-            widget = FilesTabWidget(node_content, tab)
-        else:
-            widget = QLabel(f"{tab.tab_type.value} — в разработке")
-
-        # Привяжем объект ContentTab к виджету, чтобы можно было сохранять/удалять
-        try:
-            widget._content_tab = tab
-        except Exception:
-            pass
-
-        return widget
-    
-
-    # Улучшенная версия сохранения с поддержкой флага "грязности" и специализированных виджетов
-    def save_node_content(self):
-        if self._is_saving:
-            return
-
-        self._is_saving = True
-        try:
-            for i in range(self.tabs.count()):
-                widget = self.tabs.widget(i)
-
-                if hasattr(widget, "is_dirty") and widget.is_dirty():
-                    print(f"🟡 save_node_content: вкладка {i} грязная → сохраняю")
-                    widget.save_to_model()
-                else:
-                    print(f"⚪ save_node_content: вкладка {i} чистая")
-
-            ContentRepository.save(self.node.content, self.db_session)
-            print("💾 save_node_content: данные узла сохранены")
-
-        except Exception as e:
-            print("❌ Ошибка сохранения содержимого узла:", e)
-
-        finally:
-            self._is_saving = False
-
-    # Обработка смены вкладки
-    # Обработка событий
-    def eventFilter(self, obj, event):
-        """Перехватываем клики внутри QTabWidget для завершения редактирования"""
-        from PyQt6.QtCore import QEvent
-        from PyQt6.QtGui import QMouseEvent
-        
-        if obj == self.tabs and event.type() == QEvent.Type.MouseButtonPress:
-            # Если идет редактирование вкладки - проверим, кликнули ли на сам редактор
-            if getattr(self, "_tab_edit_active", False):
-                edit = getattr(self, "_tab_rename_edit", None)
-                if edit and isinstance(event, QMouseEvent):
-                    # Получаем координаты клика в системе координат редактора
-                    editor_rect = edit.geometry()
-                    click_pos = event.pos()
-                    
-                    # Если клик вне редактора - завершить редактирование
-                    if not editor_rect.contains(click_pos):
-                        self.finish_rename_tab(save=True)
-        
-        return super().eventFilter(obj, event)
-
-    # Обработка смены вкладки
-    def on_tab_changed(self, index):
-        if self._previous_tab_widget and hasattr(self._previous_tab_widget, "on_deactivate"):
-            print("🔄 Переключение вкладки: деактивация предыдущей вкладки")
-            self._previous_tab_widget.on_deactivate()
-
-        self._previous_tab_widget = self.tabs.widget(index)
-
-    # Контекстное меню вкладок
-    def on_tab_context_menu(self, pos):
-        index = self.tabs.tabBar().tabAt(pos)
-        if index < 0:
-            return
-
-        menu = QMenu(self)
-        rename_action = menu.addAction("Переименовать")
-        delete_action = menu.addAction("Удалить")
-
-        action = menu.exec(self.tabs.mapToGlobal(pos))
-        if action == rename_action:
-            self.start_rename_tab(index)
-        elif action == delete_action:
-            self.confirm_delete_tab(index)
-
-    # Подтверждение удаления вкладки
-    def confirm_delete_tab(self, index):
-        reply = QMessageBox.question(
-            self,
-            "Удаление вкладки",
-            "Удалить вкладку без возможности восстановления?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            self.delete_tab(index)
-
-    # Удаление вкладки + сохранение
-    def delete_tab(self, index):
-        widget = self.tabs.widget(index)
-        tab = getattr(widget, "_content_tab", None)
-
-        # Если это вкладка с файлами — сначала удаляем все её файлы с диска
-        if isinstance(widget, FilesTabWidget):
-            widget.delete_all_files()
-
-        self.tabs.removeTab(index)
-
-        if tab:
-            ContentService.remove_tab(self.node.content, tab.tab_id)
-            self.save_node_content()
-
-    # Сохранение перед закрытием
-    def closeEvent(self, event):
-        self.save_node_content()
-        super().closeEvent(event)
 
     
