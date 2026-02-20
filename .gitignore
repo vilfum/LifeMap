@@ -8,3 +8,12 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+# Файлы данных проекта
+data/lifemap.db
+data/database.db-journal
+data/attachments/*
+!data/attachments/.gitkeep
+
+# Старье
+oldik/*
