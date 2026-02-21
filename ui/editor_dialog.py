@@ -36,6 +36,8 @@ from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
 from core.content_service import ContentService
 from core.content_repository import ContentRepository
 
+from ui.themes import is_dark_mode
+
 from widgets import (
     BaseTabWidget, TextTabWidget,
     ListTabWidget, TodoTabWidget,
@@ -221,189 +223,200 @@ class NodeContentEditorDialog(QDialog):
             parent = parent.parent()
         return None
 
-    def apply_theme(self):
-        """Применить тему на основе родительского MainWindow"""
-        main_window = self.get_main_window()
-        if not main_window:
-            return
+    # def apply_theme(self):
+    #     """Применить тему на основе родительского MainWindow"""
+    #     main_window = self.get_main_window()
+    #     if not main_window:
+    #         return
 
-        self.dark_mode = main_window.dark_mode   # <-- СОХРАНЯЕМ ТЕМУ В ДИАЛОГЕ
-        dark_mode = main_window.dark_mode if hasattr(main_window, 'dark_mode') else False
-        app = QApplication.instance()
+    #     self.dark_mode = main_window.dark_mode   # <-- СОХРАНЯЕМ ТЕМУ В ДИАЛОГЕ
+    #     dark_mode = main_window.dark_mode if hasattr(main_window, 'dark_mode') else False
+    #     app = QApplication.instance()
     
-        # Копируем палитру и стиль приложения (базовые настройки)
-        self.setPalette(app.palette())
-        self.setStyle(app.style())
+    #     # Копируем палитру и стиль приложения (базовые настройки)
+    #     self.setPalette(app.palette())
+    #     self.setStyle(app.style())
     
-        # --- ЯВНЫЕ СТИЛИ ДЛЯ ВСЕХ ВИДЖЕТОВ ДИАЛОГА ---
-        if dark_mode:
-            self.setStyleSheet("""
-                NodeContentEditorDialog {
-                    background-color: #353535;
-                    color: white;
-                }
-                NodeContentEditorDialog QLabel {
-                    color: white;
-                    background-color: transparent;
-                }
-                NodeContentEditorDialog QLineEdit {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                    padding: 3px;
-                }
-                NodeContentEditorDialog QTextEdit {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                }
-                NodeContentEditorDialog QListWidget {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                }
-                NodeContentEditorDialog QListWidget::item:selected {
-                    background-color: #2a82da;
-                    color: white;
-                }
-                NodeContentEditorDialog QPushButton {
-                    background-color: #404040;
-                    color: white;
-                    border: 1px solid #555;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                NodeContentEditorDialog QPushButton:hover {
-                    background-color: #505050;
-                }
-                NodeContentEditorDialog QPushButton:pressed {
-                    background-color: #606060;
-                }
-                NodeContentEditorDialog QTabWidget::pane {
-                    border: 1px solid #555;
-                    background-color: #353535;
-                }
-                NodeContentEditorDialog QTabBar::tab {
-                    background-color: #404040;
-                    color: white;
-                    padding: 8px 15px;
-                    margin-right: 2px;
-                    border-top-left-radius: 4px;
-                    border-top-right-radius: 4px;
-                }
-                NodeContentEditorDialog QTabBar::tab:selected {
-                    background-color: #505050;
-                }
-                NodeContentEditorDialog QTabBar::tab:hover:!selected {
-                    background-color: #454545;
-                }
-                NodeContentEditorDialog QDateEdit {
-                    background-color: #252525;
-                    color: white;
-                    border: 1px solid #555;
-                    padding: 3px;
-                }
+    #     # --- ЯВНЫЕ СТИЛИ ДЛЯ ВСЕХ ВИДЖЕТОВ ДИАЛОГА ---
+    #     if dark_mode:
+    #         self.setStyleSheet("""
+    #             NodeContentEditorDialog {
+    #                 background-color: #353535;
+    #                 color: white;
+    #             }
+    #             NodeContentEditorDialog QLabel {
+    #                 color: white;
+    #                 background-color: transparent;
+    #             }
+    #             NodeContentEditorDialog QLineEdit {
+    #                 background-color: #252525;
+    #                 color: white;
+    #                 border: 1px solid #555;
+    #                 padding: 3px;
+    #             }
+    #             NodeContentEditorDialog QTextEdit {
+    #                 background-color: #252525;
+    #                 color: white;
+    #                 border: 1px solid #555;
+    #             }
+    #             NodeContentEditorDialog QListWidget {
+    #                 background-color: #252525;
+    #                 color: white;
+    #                 border: 1px solid #555;
+    #             }
+    #             NodeContentEditorDialog QListWidget::item:selected {
+    #                 background-color: #2a82da;
+    #                 color: white;
+    #             }
+    #             NodeContentEditorDialog QPushButton {
+    #                 background-color: #404040;
+    #                 color: white;
+    #                 border: 1px solid #555;
+    #                 padding: 5px;
+    #                 border-radius: 3px;
+    #             }
+    #             NodeContentEditorDialog QPushButton:hover {
+    #                 background-color: #505050;
+    #             }
+    #             NodeContentEditorDialog QPushButton:pressed {
+    #                 background-color: #606060;
+    #             }
+    #             NodeContentEditorDialog QTabWidget::pane {
+    #                 border: 1px solid #555;
+    #                 background-color: #353535;
+    #             }
+    #             NodeContentEditorDialog QTabBar::tab {
+    #                 background-color: #404040;
+    #                 color: white;
+    #                 padding: 8px 15px;
+    #                 margin-right: 2px;
+    #                 border-top-left-radius: 4px;
+    #                 border-top-right-radius: 4px;
+    #             }
+    #             NodeContentEditorDialog QTabBar::tab:selected {
+    #                 background-color: #505050;
+    #             }
+    #             NodeContentEditorDialog QTabBar::tab:hover:!selected {
+    #                 background-color: #454545;
+    #             }
+    #             NodeContentEditorDialog QDateEdit {
+    #                 background-color: #252525;
+    #                 color: white;
+    #                 border: 1px solid #555;
+    #                 padding: 3px;
+    #             }
                 
-                NodeContentEditorDialog QMenu {
-                    background-color: #353535;
-                    color: white;
-                    border: 1px solid #555;
-                }
-                NodeContentEditorDialog QMenu::item:selected {
-                    background-color: #2a82da;
-                }
-            """)
-        else:
-            self.setStyleSheet("""
-                NodeContentEditorDialog {
-                    background-color: #f5f5f5;
-                    color: black;
-                }
-                NodeContentEditorDialog QLabel {
-                    color: black;
-                    background-color: transparent;
-                }
-                NodeContentEditorDialog QLineEdit {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                    padding: 3px;
-                }
-                NodeContentEditorDialog QTextEdit {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                }
-                NodeContentEditorDialog QListWidget {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                }
-                NodeContentEditorDialog QListWidget::item:selected {
-                    background-color: #e0e0e0;
-                    color: black;
-                }
-                NodeContentEditorDialog QPushButton {
-                    background-color: #f0f0f0;
-                    color: black;
-                    border: 1px solid #ccc;
-                    padding: 5px;
-                    border-radius: 3px;
-                }
-                NodeContentEditorDialog QPushButton:hover {
-                    background-color: #e0e0e0;
-                }
-                NodeContentEditorDialog QPushButton:pressed {
-                    background-color: #d0d0d0;
-                }
-                NodeContentEditorDialog QTabWidget::pane {
-                    border: 1px solid #ccc;
-                    background-color: #f5f5f5;
-                }
-                NodeContentEditorDialog QTabBar::tab {
-                    background-color: #e0e0e0;
-                    color: black;
-                    padding: 8px 15px;
-                    margin-right: 2px;
-                    border-top-left-radius: 4px;
-                    border-top-right-radius: 4px;
-                }
-                NodeContentEditorDialog QTabBar::tab:selected {
-                    background-color: #d0d0d0;
-                }
-                NodeContentEditorDialog QTabBar::tab:hover:!selected {
-                    background-color: #d0d0d0;
-                }
-                NodeContentEditorDialog QDateEdit {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                    padding: 3px;
-                }
+    #             NodeContentEditorDialog QMenu {
+    #                 background-color: #353535;
+    #                 color: white;
+    #                 border: 1px solid #555;
+    #             }
+    #             NodeContentEditorDialog QMenu::item:selected {
+    #                 background-color: #2a82da;
+    #             }
+    #         """)
+    #     else:
+    #         self.setStyleSheet("""
+    #             NodeContentEditorDialog {
+    #                 background-color: #f5f5f5;
+    #                 color: black;
+    #             }
+    #             NodeContentEditorDialog QLabel {
+    #                 color: black;
+    #                 background-color: transparent;
+    #             }
+    #             NodeContentEditorDialog QLineEdit {
+    #                 background-color: white;
+    #                 color: black;
+    #                 border: 1px solid #ccc;
+    #                 padding: 3px;
+    #             }
+    #             NodeContentEditorDialog QTextEdit {
+    #                 background-color: white;
+    #                 color: black;
+    #                 border: 1px solid #ccc;
+    #             }
+    #             NodeContentEditorDialog QListWidget {
+    #                 background-color: white;
+    #                 color: black;
+    #                 border: 1px solid #ccc;
+    #             }
+    #             NodeContentEditorDialog QListWidget::item:selected {
+    #                 background-color: #e0e0e0;
+    #                 color: black;
+    #             }
+    #             NodeContentEditorDialog QPushButton {
+    #                 background-color: #f0f0f0;
+    #                 color: black;
+    #                 border: 1px solid #ccc;
+    #                 padding: 5px;
+    #                 border-radius: 3px;
+    #             }
+    #             NodeContentEditorDialog QPushButton:hover {
+    #                 background-color: #e0e0e0;
+    #             }
+    #             NodeContentEditorDialog QPushButton:pressed {
+    #                 background-color: #d0d0d0;
+    #             }
+    #             NodeContentEditorDialog QTabWidget::pane {
+    #                 border: 1px solid #ccc;
+    #                 background-color: #f5f5f5;
+    #             }
+    #             NodeContentEditorDialog QTabBar::tab {
+    #                 background-color: #e0e0e0;
+    #                 color: black;
+    #                 padding: 8px 15px;
+    #                 margin-right: 2px;
+    #                 border-top-left-radius: 4px;
+    #                 border-top-right-radius: 4px;
+    #             }
+    #             NodeContentEditorDialog QTabBar::tab:selected {
+    #                 background-color: #d0d0d0;
+    #             }
+    #             NodeContentEditorDialog QTabBar::tab:hover:!selected {
+    #                 background-color: #d0d0d0;
+    #             }
+    #             NodeContentEditorDialog QDateEdit {
+    #                 background-color: white;
+    #                 color: black;
+    #                 border: 1px solid #ccc;
+    #                 padding: 3px;
+    #             }
                 
-                NodeContentEditorDialog QMenu {
-                    background-color: white;
-                    color: black;
-                    border: 1px solid #ccc;
-                }
-                NodeContentEditorDialog QMenu::item:selected {
-                    background-color: #e0e0e0;
-                }
-           """)
+    #             NodeContentEditorDialog QMenu {
+    #                 background-color: white;
+    #                 color: black;
+    #                 border: 1px solid #ccc;
+    #             }
+    #             NodeContentEditorDialog QMenu::item:selected {
+    #                 background-color: #e0e0e0;
+    #             }
+    #        """)
+    #     # Обновляем тему во всех вкладках
+    #     for i in range(self.tabs.count()):
+    #         widget = self.tabs.widget(i)
+    #         if hasattr(widget, 'refresh_theme'):
+    #             widget.refresh_theme()
+                
+
+    #     self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+    #     self.setAutoFillBackground(True)
+    #     self.update()
+    #     # Принудительно обновляем геометрию и перерисовываем
+    #     self.update()
+    #     self.repaint()
+    #     QApplication.processEvents()
+
+    def apply_theme(self):
+        """Применить текущую тему"""
+        
+        self.dark_mode = is_dark_mode()
         # Обновляем тему во всех вкладках
         for i in range(self.tabs.count()):
             widget = self.tabs.widget(i)
             if hasattr(widget, 'refresh_theme'):
                 widget.refresh_theme()
-                
-
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setAutoFillBackground(True)
         self.update()
-        # Принудительно обновляем геометрию и перерисовываем
-        self.update()
-        self.repaint()
-        QApplication.processEvents()
     
 
     def _build_ui(self):

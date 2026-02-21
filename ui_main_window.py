@@ -37,6 +37,7 @@ from core.file_service import FileService
 from core.content_service import ContentService
 from core.content_repository import ContentRepository
 from ui.editor_dialog import NodeContentEditorDialog
+from ui.themes import set_dark_mode, get_stylesheet, is_dark_mode
 
 
 
@@ -690,19 +691,20 @@ class MainWindow(QMainWindow):
         self.dark_mode = not self.dark_mode
         self.save_theme_setting(self.dark_mode)
         self.apply_theme()
-        self.update_all_dialogs_theme()
+    #    self.update_all_dialogs_theme()
 
-    def update_all_dialogs_theme(self):
-        """Обновить тему во всех открытых диалогах"""
-        for widget in QApplication.topLevelWidgets():
-            if isinstance(widget, NodeContentEditorDialog):
-                widget.apply_theme()
+    # def update_all_dialogs_theme(self):
+    #     """Обновить тему во всех открытых диалогах"""
+    #     for widget in QApplication.topLevelWidgets():
+    #         if isinstance(widget, NodeContentEditorDialog):
+    #             widget.apply_theme()
     
     def apply_theme(self):
         """Применить текущую тему на основе self.dark_mode"""
         # Получаем текущее приложение
         app = QApplication.instance()
-    
+        set_dark_mode(self.dark_mode)
+
         if self.dark_mode:
             # ТЕМНАЯ ТЕМА
             # Устанавливаем темную палитру
@@ -725,144 +727,6 @@ class MainWindow(QMainWindow):
         
             # Устанавливаем палитру
             app.setPalette(dark_palette)
-        
-            # Устанавливаем стиль для темной темы
-            app.setStyleSheet("""
-                /* Стиль для всех меню в темной теме */
-                QMenu {
-                    background-color: #353535;
-                    border: 1px solid #555555;
-                    color: #ffffff;
-                    padding: 4px;
-                }
-            
-                QMenu::item {
-                    background-color: transparent;
-                    padding: 6px 24px 6px 8px;
-                    margin: 2px 4px;
-                    border-radius: 3px;
-                }
-            
-                QMenu::item:selected {
-                    background-color: #2a82da;
-                    color: #ffffff;
-                }
-            
-                QMenu::item:disabled {
-                    color: #777777;
-                }
-            
-                QMenu::separator {
-                    height: 1px;
-                    background-color: #555555;
-                    margin: 4px 8px;
-                }
-            
-                /* Стиль для панели инструментов в темной теме */
-                QToolBar {
-                    background-color: #2b2b2b;
-                    border: none;
-                    spacing: 3px;
-                    padding: 2px;
-                }
-            
-                QToolBar QToolButton {
-                    background-color: transparent;
-                    border: 1px solid transparent;
-                    border-radius: 3px;
-                    padding: 4px;
-                    color: #ffffff;
-                }
-            
-                QToolBar QToolButton:hover {
-                    background-color: #404040;
-                    border: 1px solid #505050;
-                }
-            
-                QToolBar QToolButton:pressed {
-                    background-color: #505050;
-                }
-            
-                /* Стиль для статусбара */
-                QStatusBar {
-                    background-color: #2b2b2b;
-                    color: #ffffff;
-                }
-            
-                /* Стиль для QGraphicsView */
-                QGraphicsView {
-                    border: 0px;
-                    outline: 0px;
-                    background: transparent;
-                }
-            
-                QGraphicsView::rubberBand {
-                    border: 2px dashed #2196F3;
-                    background-color: rgba(33, 150, 243, 30);
-                }
-                              
-                /* ===== QCalendarWidget DARK ===== */
-                QCalendarWidget {
-                    background-color: #353535;
-                    color: white;
-                }
-
-                QCalendarWidget QWidget#qt_calendar_navigationbar {
-                    background-color: #2b2b2b;
-                }
-
-                QCalendarWidget QToolButton {
-                    background: transparent;
-                    border: none;
-                    color: white;
-                    icon-size: 18px;
-                }
-
-                QCalendarWidget QToolButton:hover {
-                    background-color: #404040;
-                }
-
-                QCalendarWidget QHeaderView::section {
-                    background-color: #2b2b2b;
-                    color: white;
-                    border: none;
-                }
-                QCalendarWidget QAbstractButton {
-                    color: white;
-                }
-                QCalendarWidget QToolButton {
-                    qproperty-icon: none;
-                }
-                QCalendarWidget QToolButton#qt_calendar_prevmonth {
-                    qproperty-text: "<";
-                }
-
-                QCalendarWidget QToolButton#qt_calendar_nextmonth {
-                    qproperty-text: ">";
-                }
-                
-                /* ===== QMessageBox DARK ===== */
-                QMessageBox {
-                   background-color: #353535;
-                }
-                
-                QMessageBox QLabel {
-                    color: #ffffff;
-                }
-
-                QMessageBox QPushButton {
-                    background-color: #2b2b2b;
-                    color: #ffffff;
-                    border: 1px solid #555555;
-                    padding: 4px 12px;
-                    border-radius: 4px;
-                }
-
-                QMessageBox QPushButton:hover {
-                    background-color: #404040;
-                }
-            """)
-        
             # Фон сцены для темной темы
             self.scene.setBackgroundBrush(QColor(45, 45, 45))
             self.theme_action.setText("☀️ Светлая тема")
@@ -872,169 +736,15 @@ class MainWindow(QMainWindow):
             # Восстанавливаем стандартную палитру Fusion
             app.setPalette(app.style().standardPalette())
         
-            # Устанавливаем стиль для светлой темы
-            app.setStyleSheet("""
-                /* Стиль для всех меню в светлой теме */
-                QMenu {
-                    background-color: #ffffff;
-                    border: 1px solid #cccccc;
-                    color: #333333;
-                    padding: 4px;
-                }
-            
-                QMenu::item {
-                    background-color: transparent;
-                    padding: 6px 24px 6px 8px;
-                    margin: 2px 4px;
-                    border-radius: 3px;
-                }
-            
-                QMenu::item:selected {
-                    background-color: #e0e0e0;
-                    color: #000000;
-                }
-            
-                QMenu::item:disabled {
-                    color: #999999;
-                }
-            
-                QMenu::separator {
-                    height: 1px;
-                    background-color: #dddddd;
-                    margin: 4px 8px;
-                }
-            
-                /* Стиль для панели инструментов в светлой теме */
-                QToolBar {
-                    background-color: #f0f0f0;
-                    border: none;
-                    spacing: 3px;
-                    padding: 2px;
-                }
-            
-                QToolBar QToolButton {
-                    background-color: transparent;
-                    border: 1px solid transparent;
-                    border-radius: 3px;
-                    padding: 4px;
-                    color: #333333;
-                }
-            
-                QToolBar QToolButton:hover {
-                    background-color: #e0e0e0;
-                    border: 1px solid #d0d0d0;
-                }
-            
-                QToolBar QToolButton:pressed {
-                    background-color: #d0d0d0;
-                }
-            
-                /* Стиль для статусбара */
-                QStatusBar {
-                    background-color: #f0f0f0;
-                    color: #333333;
-                }
-            
-                /* Стиль для QGraphicsView */
-                QGraphicsView {
-                    border: 0px;
-                    outline: 0px;
-                    background: transparent;
-                }
-            
-                QGraphicsView::rubberBand {
-                    border: 2px dashed #2196F3;
-                    background-color: rgba(33, 150, 243, 30);
-                }
-                /* ===== QCalendarWidget LIGHT ===== */
-
-                QCalendarWidget {
-                    background-color: #ffffff;
-                    color: #333333;
-                }
-
-                QCalendarWidget QWidget#qt_calendar_navigationbar {
-                    background-color: #f0f0f0;
-                }
-
-                QCalendarWidget QToolButton {
-                    background: transparent;
-                    border: none;
-                    color: #333333;
-                    icon-size: 18px;
-                }
-
-                QCalendarWidget QToolButton:hover {
-                    background-color: #e0e0e0;
-                }
-
-                QCalendarWidget QHeaderView::section {
-                    background-color: #f0f0f0;
-                    color: #333333;
-                    border: none;
-                }
-                QCalendarWidget QAbstractButton {
-                    color: #333333;
-                }
-                QCalendarWidget QToolButton {
-                    qproperty-icon: none;
-                }
-                QCalendarWidget QToolButton#qt_calendar_prevmonth {
-                    qproperty-text: "<";
-                }
-
-                QCalendarWidget QToolButton#qt_calendar_nextmonth {
-                    qproperty-text: ">";
-                }
-                        
-                /* ===== QCalendarWidget LIGHT FINAL FIX ===== */
-                /* Внутренний view календаря */
-                QCalendarWidget QTableView#qt_calendar_calendarview {
-                    background-color: #f0f0f0;
-                    alternate-background-color: #f0f0f0;
-                    gridline-color: #dddddd;
-                    color: #333333;
-                }
-
-                /* Строка дней недели */
-                QCalendarWidget QTableView#qt_calendar_calendarview QHeaderView::section {
-                    background-color: #ffffff;
-                    color: #dddddd;
-                    border: none;
-                }
-
-                /* Убираем тёмную рамку */
-                QCalendarWidget QTableView {
-                    border: none;
-                }
-                
-                /* ===== QMessageBox LIGHT ===== */
-                QMessageBox {
-                    background-color: #ffffff;
-                }
-
-                QMessageBox QLabel {
-                    color: #333333;
-                }
-
-                QMessageBox QPushButton {
-                    background-color: #f0f0f0;
-                    color: #333333;
-                    border: 1px solid #cccccc;
-                    padding: 4px 12px;
-                    border-radius: 4px;
-                }
-
-                QMessageBox QPushButton:hover {
-                    background-color: #e0e0e0;
-                }
-            """)
-        
             # Фон сцены для светлой темы
             self.scene.setBackgroundBrush(QColor(245, 245, 245))
             self.theme_action.setText("🌙 Темная тема")
-    
+
+        # Загружаем стили из .qss файла
+        stylesheet = get_stylesheet()
+        app.setStyleSheet(stylesheet)
         # Обновляем все виджеты
+        #self.update_all_dialogs_theme()
         app.processEvents()
         self.update()
         

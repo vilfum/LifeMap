@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QDate
 from widgets import BaseTabWidget
 from core.content_service import ContentService
+from ui.themes import is_dark_mode
 
 class DatesTabWidget(BaseTabWidget):
     """Вкладка для хранения дат и событий"""
@@ -50,26 +51,134 @@ class DatesTabWidget(BaseTabWidget):
     def _apply_theme_to_widget(self, widget):
         """Применить тему к динамически созданному виджету"""
         #print(f"   _apply_theme_to_widget: {widget.__class__.__name__}")
-        dialog = self.window()
-        if not dialog:
-            return
-        dark_mode = getattr(dialog, 'dark_mode', False)   # если атрибута нет — светлая тема
+        #dialog = self.window()
+        #if not dialog:
+        #    return
+        #dark_mode = getattr(dialog, 'dark_mode', False)   # если атрибута нет — светлая тема
+        #dark_mode = is_dark_mode()
+
+        # --- 1. Для контейнеров (QWidget, кроме специальных) ---
+        #if isinstance(widget, QWidget) and not isinstance(widget, 
+        #        (QLineEdit, QDateEdit, QPushButton, QTextEdit, QListWidget, QScrollArea)):
+            #print(f"      → контейнер, dark_mode={dark_mode}, устанавливаю фон: {dark_mode and '#353535' or '#f5f5f5'}")
+        #    color = "#353535" if dark_mode else "#f5f5f5"
+        #    widget.setStyleSheet(f"background-color: {color};")
+        #    widget.setAutoFillBackground(True)   # необязательно, но оставим
+        #    return
+        
+            # --- 1.1 Для QScrollArea ---
+        #elif isinstance(widget, QScrollArea):
+        #    dialog = self.window()
+        #    if not dialog or not hasattr(dialog, 'dark_mode'):
+        #        return
+        #    dark_mode = dialog.dark_mode
+        #    color = "#353535" if dark_mode else "#f5f5f5"
+        #    widget.setStyleSheet(f"QScrollArea {{ background-color: {color}; border: none; }}")
+        #    widget.viewport().setStyleSheet(f"background-color: {color};")
+        #    widget.setAutoFillBackground(True)
+        #    widget.viewport().setAutoFillBackground(True)
+        #    return
+
+        # --- 2. Для полей ввода и кнопок (оставляем StyleSheet) ---
+        #elif isinstance(widget, QLineEdit):
+        #    if dark_mode:
+        #        widget.setStyleSheet("""
+        #            QLineEdit {
+        #                background-color: #252525;
+        #                color: white;
+        #                border: 1px solid #555;
+        #                padding: 3px;
+        #            }
+        #        """)
+        #    else:
+        #        widget.setStyleSheet("""
+        #            QLineEdit {
+        #                background-color: white;
+        #                color: black;
+        #                border: 1px solid #ccc;
+        #                padding: 3px;
+        #            }
+        #        """)
+        #    widget.setPalette(dialog.palette())
+        #    widget.setAutoFillBackground(True)
+
+        #elif isinstance(widget, QDateEdit):
+        #    if dark_mode:
+        #        widget.setStyleSheet("""
+        #            QDateEdit {
+        #                background-color: #252525;
+        #                color: white;
+        #                border: 1px solid #555;
+        #                padding: 3px;
+        #            }
+        #            QDateEdit::drop-down {
+        #                background-color: #404040;
+        #                border: 1px solid #555;
+        #            }
+        #        """)
+        #    else:
+        #        widget.setStyleSheet("""
+        #            QDateEdit {
+        #                background-color: white;
+        #                color: black;
+        #                border: 1px solid #ccc;
+        #                padding: 3px;
+        #            }
+        #            QDateEdit::drop-down {
+        #                background-color: #f0f0f0;
+        #                border: 1px solid #ccc;
+        #            }
+        #        """)
+        #    widget.setPalette(dialog.palette())
+        #    widget.setAutoFillBackground(True)
+
+        #elif isinstance(widget, QPushButton):
+        #    if dark_mode:
+        #        widget.setStyleSheet("""
+        #            QPushButton {
+        #                background-color: #404040;
+        #                color: white;
+        #                border: 1px solid #555;
+        #                padding: 5px;
+        #                border-radius: 3px;
+        #            }
+        #            QPushButton:hover {
+        #                background-color: #505050;
+        #            }
+        #            QPushButton:pressed {
+        #                background-color: #606060;
+        #            }
+        #        """)
+        #    else:
+        #        widget.setStyleSheet("""
+        #            QPushButton {
+        #                background-color: #f0f0f0;
+        #                color: black;
+        #                border: 1px solid #ccc;
+        #                padding: 5px;
+        #                border-radius: 3px;
+        #            }
+        #            QPushButton:hover {
+        #                background-color: #e0e0e0;
+        #            }
+        #            QPushButton:pressed {
+        #                background-color: #d0d0d0;
+        #            }
+        #        """)
+        #    widget.setPalette(dialog.palette())
+        #    widget.setAutoFillBackground(True)
+        dark_mode = is_dark_mode()  # получаем состояние темы из глобального модуля
 
         # --- 1. Для контейнеров (QWidget, кроме специальных) ---
         if isinstance(widget, QWidget) and not isinstance(widget, 
                 (QLineEdit, QDateEdit, QPushButton, QTextEdit, QListWidget, QScrollArea)):
-            #print(f"      → контейнер, dark_mode={dark_mode}, устанавливаю фон: {dark_mode and '#353535' or '#f5f5f5'}")
             color = "#353535" if dark_mode else "#f5f5f5"
             widget.setStyleSheet(f"background-color: {color};")
-            widget.setAutoFillBackground(True)   # необязательно, но оставим
+            widget.setAutoFillBackground(True)
             return
-        
-            # --- 1.1 Для QScrollArea ---
+
+        # --- 1.1 Для QScrollArea ---
         elif isinstance(widget, QScrollArea):
-            dialog = self.window()
-            if not dialog or not hasattr(dialog, 'dark_mode'):
-                return
-            dark_mode = dialog.dark_mode
             color = "#353535" if dark_mode else "#f5f5f5"
             widget.setStyleSheet(f"QScrollArea {{ background-color: {color}; border: none; }}")
             widget.viewport().setStyleSheet(f"background-color: {color};")
@@ -77,7 +186,7 @@ class DatesTabWidget(BaseTabWidget):
             widget.viewport().setAutoFillBackground(True)
             return
 
-        # --- 2. Для полей ввода и кнопок (оставляем StyleSheet) ---
+        # --- 2. Для полей ввода и кнопок ---
         elif isinstance(widget, QLineEdit):
             if dark_mode:
                 widget.setStyleSheet("""
@@ -97,7 +206,6 @@ class DatesTabWidget(BaseTabWidget):
                         padding: 3px;
                     }
                 """)
-            widget.setPalette(dialog.palette())
             widget.setAutoFillBackground(True)
 
         elif isinstance(widget, QDateEdit):
@@ -127,7 +235,6 @@ class DatesTabWidget(BaseTabWidget):
                         border: 1px solid #ccc;
                     }
                 """)
-            widget.setPalette(dialog.palette())
             widget.setAutoFillBackground(True)
 
         elif isinstance(widget, QPushButton):
@@ -163,7 +270,6 @@ class DatesTabWidget(BaseTabWidget):
                         background-color: #d0d0d0;
                     }
                 """)
-            widget.setPalette(dialog.palette())
             widget.setAutoFillBackground(True)
 
     # Добавление строки события

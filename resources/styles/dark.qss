@@ -1,0 +1,147 @@
+/* dark.qss */
+QMenu {
+    background-color: #353535;
+    border: 1px solid #555555;
+    color: #ffffff;
+    padding: 4px;
+}
+            
+QMenu::item {
+    background-color: transparent;
+    padding: 6px 24px 6px 8px;
+    margin: 2px 4px;
+    border-radius: 3px;
+}
+            
+QMenu::item:selected {
+    background-color: #2a82da;
+    color: #ffffff;
+}
+            
+QMenu::item:disabled {
+    color: #777777;
+}
+            
+QMenu::separator {
+    height: 1px;
+    background-color: #555555;
+    margin: 4px 8px;
+}
+            
+/* Стиль для панели инструментов в темной теме */
+QToolBar {
+    background-color: #2b2b2b;
+    border: none;
+    spacing: 3px;
+    padding: 2px;
+}
+            
+QToolBar QToolButton {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 4px;
+    color: #ffffff;
+}
+            
+QToolBar QToolButton:hover {
+    background-color: #404040;
+    border: 1px solid #505050;
+}
+            
+QToolBar QToolButton:pressed {
+    background-color: #505050;
+}
+            
+/* Стиль для статусбара */
+QStatusBar {
+    background-color: #2b2b2b;
+    color: #ffffff;
+}
+            
+/* Стиль для QGraphicsView */
+QGraphicsView {
+    border: 0px;
+    outline: 0px;
+    background: transparent;
+}
+            
+QGraphicsView::rubberBand {
+    border: 2px dashed #2196F3;
+    background-color: rgba(33, 150, 243, 30);
+}
+              
+/* ===== QCalendarWidget DARK ===== */
+QCalendarWidget {
+    background-color: #353535;
+    color: white;
+}
+
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background-color: #2b2b2b;
+}
+
+QCalendarWidget QToolButton {
+    background: transparent;
+    border: none;
+    color: white;
+    icon-size: 18px;
+}
+
+QCalendarWidget QToolButton:hover {
+    background-color: #404040;
+}
+
+QCalendarWidget QHeaderView::section {
+    background-color: #2b2b2b;
+    color: white;
+    border: none;
+}
+QCalendarWidget QAbstractButton {
+    color: white;
+}
+QCalendarWidget QToolButton {
+    qproperty-icon: none;
+}
+QCalendarWidget QToolButton#qt_calendar_prevmonth {
+    qproperty-text: "<";
+}
+
+QCalendarWidget QToolButton#qt_calendar_nextmonth {
+    qproperty-text: ">";
+}
+
+/* ===== QMessageBox DARK ===== */
+QMessageBox {
+   background-color: #353535;
+}
+
+QMessageBox QLabel {
+    color: #ffffff;
+}
+
+QMessageBox QPushButton {
+    background-color: #2b2b2b;
+    color: #ffffff;
+    border: 1px solid #555555;
+    padding: 4px 12px;
+    border-radius: 4px;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: #404040;
+}
+
+QListWidget::item:selected {
+    background-color: #404040;
+    color: white;
+    outline: none;
+}
+
+QListWidget:focus {
+    outline: none;
+}
+
+QListWidget::item:focus {
+    outline: none;
+}
