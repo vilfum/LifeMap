@@ -33,8 +33,7 @@ from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap,
 #from database import DatabaseManager, EncryptedSQLite
 from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
 
-from core.content_service import ContentService
-from core.content_repository import ContentRepository
+from core import ContentService, ContentRepository
 
 from ui.themes import is_dark_mode
 

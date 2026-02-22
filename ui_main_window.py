@@ -33,11 +33,14 @@ from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap,
 from ui_graph_scene import GraphScene, GraphView
 from database import DatabaseManager, EncryptedSQLite
 from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
-from core.file_service import FileService
-from core.content_service import ContentService
-from core.content_repository import ContentRepository
-from ui.editor_dialog import NodeContentEditorDialog
-from ui.themes import set_dark_mode, get_stylesheet, is_dark_mode
+from core import (
+    FileService, ContentService, 
+    ContentRepository, GraphService
+)
+from ui import (
+    NodeContentEditorDialog, set_dark_mode, get_stylesheet,
+    is_dark_mode
+)
 
 
 
@@ -109,6 +112,8 @@ class MainWindow(QMainWindow):
         self._login_shown = False
 
         self.last_node_pos = (0, 0)
+
+        self.graph_service = GraphService(self.db_session)
 
         # Инициализация сервиса для работы с файлами
         self.file_service = FileService()
@@ -311,6 +316,9 @@ class MainWindow(QMainWindow):
             # Создаем корневой узел если его нет
             root_node = self.db_session.create_root_node()
             
+            # Инициализируем сервис графа (теперь db_session существует)
+            self.graph_service = GraphService(self.db_session)
+
             # Загружаем данные
             self.load_data()
             
@@ -331,7 +339,7 @@ class MainWindow(QMainWindow):
         self.scene.edges.clear()
         
         # Загружаем узлы
-        nodes = self.db_session.get_all_nodes()
+        nodes = self.graph_service.get_all_nodes()
         if nodes:
             last = max(nodes, key=lambda n: n.id)
             self.last_node_pos = (last.position_x, last.position_y)
@@ -346,7 +354,7 @@ class MainWindow(QMainWindow):
             node_items[node.id] = node_item
         
         # Загружаем связи
-        edges = self.db_session.get_all_edges()
+        edges = self.graph_service.get_all_edges()
         for edge in edges:
             self.scene.add_edge(
                 edge.id, edge.from_node_id, edge.to_node_id,
@@ -371,39 +379,21 @@ class MainWindow(QMainWindow):
             self, "Новый корневой узел", "Введите название узла:"
         )
         if ok and text:
-            #node = self.db_session.add_node(text, None, 0, 0)
-            #self.scene.add_node(node.id, node.title, 0, 0, node.color)
-            # Получаем все узлы
-            # Определяем координаты
-            ##if self.last_node_pos == (0, 0) and not self.db_session.get_all_nodes():
-                # Если узлов нет, ставим в центр экрана
-            #    viewport_rect = self.view.viewport().rect()
-            #    center = self.view.mapToScene(viewport_rect.center())
-            #    x, y = center.x(), center.y()
-            #else:
-            #    x, y = self.last_node_pos
-            #    y += 40  # отступ вниз
-        
-            #node = self.db_session.add_node(text, None, x, y)
-            #if node:
-            #    self.scene.add_node(node.id, node.title, x, y, node.color)
-            #    self.last_node_pos = (x, y)
-            #    print(f"add_root_node: created node {node.id} at ({x}, {y})")
             if not hasattr(self, 'last_node_pos'):
                 self.last_node_pos = (0, 0)
         
-            if self.last_node_pos == (0, 0) and not self.db_session.get_all_nodes():
+            if self.last_node_pos == (0, 0) and not self.graph_service.get_all_nodes():
                 # Если узлов нет – ставим в центр экрана с привязкой к сетке
                 viewport_rect = self.view.viewport().rect()
                 center = self.view.mapToScene(viewport_rect.center())
                 x, y = self.snap_to_grid(center.x(), center.y())
             else:
-                # Берём последнюю позицию и смещаем вниз на одну ячейку
+                # Берем последнюю позицию и смещаем вниз на одну ячейку
                 x, y = self.last_node_pos
                 y += self.scene.grid_size
                 x, y = self.snap_to_grid(x, y)
         
-            node = self.db_session.add_node(text, None, x, y)
+            node = self.graph_service.add_node(text, None, x, y)
             if node:
                 self.scene.add_node(node.id, node.title, x, y, node.color)
                 self.last_node_pos = (x, y)
@@ -414,62 +404,14 @@ class MainWindow(QMainWindow):
             self, "Новый узел", "Введите название узла:"
         )
         if ok and text:
-            #node = self.db_session.add_node(text, None, x, y)
-            #if node:
-            #    self.scene.add_node(node.id, node.title, x, y, node.color)
-            #    self.last_node_pos = (x, y)
             x, y = self.snap_to_grid(x, y)
-            node = self.db_session.add_node(text, None, x, y)
+            node = self.graph_service.add_node(text, None, x, y)
             if node:
                 self.scene.add_node(node.id, node.title, x, y, node.color)
                 self.last_node_pos = (x, y)
     
     def add_child_node(self, parent_id: int, title: str, x: float, y: float):
         """Добавление дочернего узла"""
-        #print(f"DEBUG add_child_node: parent_id={parent_id}, title={title}, x={x}, y={y}")
-        #print(f"DEBUG scene.nodes keys: {list(self.scene.nodes.keys())}")
-        #try:
-            # Создаем узел в БД
-        #    node = self.db_session.add_node(title, parent_id, x, y)
-        #    if node:
-        #        self.scene.add_node(node.id, node.title, x, y, node.color)
-        #        self.last_node_pos = (x, y)
-        
-            # Создаем графический элемент узла
-        #    node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
-        
-            # Создаем связь в БД
-        #    edge = self.db_session.add_edge(parent_id, node.id)
-            # Проверка
-        #    if edge is None:
-        #        print(f"ОШИБКА: Не удалось создать связь в БД между {parent_id} и {node.id}")
-        #        return None
-        
-            # Создаем графический элемент связи
-        #    edge_item = self.scene.add_edge(edge.id, parent_id, node.id)
-        #    if edge_item is None:
-        #        print(f"ОШИБКА: EdgeItem не создан для связи {edge.id}")
-        #        print(f"  from_node_id={parent_id}, to_node_id={node.id}")
-        #        print(f"  from_item exists: {parent_id in self.scene.nodes}")
-        #        print(f"  to_item exists: {node.id in self.scene.nodes}")
-                # Можно попробовать получить узлы напрямую
-        #        from_item = self.scene.nodes.get(parent_id)
-        #        to_item = self.scene.nodes.get(node.id)
-        #        print(f"  from_item: {from_item}")
-        #        print(f"  to_item: {to_item}")
-        
-            # ИСПРАВЛЕНИЕ: ОБНОВЛЯЕМ ФЛАГ has_children 
-        #    parent_item = self.scene.nodes.get(parent_id)
-        #    if parent_item:
-        #        parent_item.set_has_children(True)  # Теперь родитель знает, что у него есть дети
-            
-        #    return node_item
-        
-        #except Exception as e:
-        #    print(f"Ошибка при создании дочернего узла: {e}")
-        #    import traceback
-        #    traceback.print_exc()
-        #    return None
         print(f"DEBUG add_child_node: parent_id={parent_id}, title={title}, original x={x}, y={y}")
         print(f"DEBUG scene.nodes keys: {list(self.scene.nodes.keys())}")
     
@@ -482,8 +424,7 @@ class MainWindow(QMainWindow):
             # Позиция родителя
             parent_x = parent_item.pos().x()
             parent_y = parent_item.pos().y()
-        
-            # Размер ячейки сетки (должен быть определён в GraphScene)
+            # Размер ячейки сетки (должен быть определен в GraphScene)
             grid = self.scene.grid_size
         
             # Вычисляем позицию дочернего узла: по X как у родителя, по Y + 2 ячейки
@@ -491,41 +432,60 @@ class MainWindow(QMainWindow):
             child_y = round((parent_y + 2 * grid) / grid) * grid
         
             # Создаём узел в БД
-            node = self.db_session.add_node(title, parent_id, child_x, child_y)
-            if not node:
-                print("ОШИБКА: не удалось создать узел в БД")
-                return None
+        #     node = self.db_session.add_node(title, parent_id, child_x, child_y)
+        #     if not node:
+        #         print("ОШИБКА: не удалось создать узел в БД")
+        #         return None
         
-            # Добавляем узел на сцену (один раз!)
+        #     # Добавляем узел на сцену (один раз!)
+        #     node_item = self.scene.add_node(node.id, node.title, child_x, child_y, node.color)
+        
+        #     # Создаём связь в БД
+        #     edge = self.db_session.add_edge(parent_id, node.id)
+        #     if edge is None:
+        #         print(f"ОШИБКА: Не удалось создать связь в БД между {parent_id} и {node.id}")
+        #         return None
+        
+        #     # Добавляем связь на сцену
+        #     edge_item = self.scene.add_edge(edge.id, parent_id, node.id)
+        #     if edge_item is None:
+        #         print(f"ОШИБКА: EdgeItem не создан для связи {edge.id}")
+        #         print(f"  from_node_id={parent_id}, to_node_id={node.id}")
+        #         print(f"  from_item exists: {parent_id in self.scene.nodes}")
+        #         print(f"  to_item exists: {node.id in self.scene.nodes}")
+        #         from_item = self.scene.nodes.get(parent_id)
+        #         to_item = self.scene.nodes.get(node.id)
+        #         print(f"  from_item: {from_item}")
+        #         print(f"  to_item: {to_item}")
+        
+        #     # Обновляем флаг наличия детей у родителя
+        #     parent_item.set_has_children(True)
+        
+        #     # Сохраняем позицию для последующих корневых узлов (опционально)
+        #     self.last_node_pos = (child_x, child_y)
+        
+        #     print(f"Дочерний узел {node.id} создан на позиции ({child_x}, {child_y})")
+        #     return node_item
+        
+        # except Exception as e:
+        #     print(f"Ошибка при создании дочернего узла: {e}")
+        #     import traceback
+        #     traceback.print_exc()
+        #     return None
+            node, edge = self.graph_service.add_child_node(parent_id, title, child_x, child_y)
+
             node_item = self.scene.add_node(node.id, node.title, child_x, child_y, node.color)
-        
-            # Создаём связь в БД
-            edge = self.db_session.add_edge(parent_id, node.id)
-            if edge is None:
-                print(f"ОШИБКА: Не удалось создать связь в БД между {parent_id} и {node.id}")
-                return None
-        
-            # Добавляем связь на сцену
             edge_item = self.scene.add_edge(edge.id, parent_id, node.id)
+
             if edge_item is None:
                 print(f"ОШИБКА: EdgeItem не создан для связи {edge.id}")
-                print(f"  from_node_id={parent_id}, to_node_id={node.id}")
-                print(f"  from_item exists: {parent_id in self.scene.nodes}")
-                print(f"  to_item exists: {node.id in self.scene.nodes}")
-                from_item = self.scene.nodes.get(parent_id)
-                to_item = self.scene.nodes.get(node.id)
-                print(f"  from_item: {from_item}")
-                print(f"  to_item: {to_item}")
-        
-            # Обновляем флаг наличия детей у родителя
+
             parent_item.set_has_children(True)
-        
-            # Сохраняем позицию для последующих корневых узлов (опционально)
             self.last_node_pos = (child_x, child_y)
-        
+
             print(f"Дочерний узел {node.id} создан на позиции ({child_x}, {child_y})")
             return node_item
-        
+
         except Exception as e:
             print(f"Ошибка при создании дочернего узла: {e}")
             import traceback
@@ -550,81 +510,114 @@ class MainWindow(QMainWindow):
                 print(f"=== РЕКУРСИВНОЕ УДАЛЕНИЕ УЗЛА {node_id} ===")
             
                 # 1. Получаем информацию об узле до удаления
-                node = self.db_session.get_node(node_id)
+                node = self.graph_service.get_node(node_id)
                 if not node:
                     print(f"Узел {node_id} не найден в БД")
                     return
             
                 parent_id = node.parent_id
-            
                 # 2. Получаем ВСЕХ потомков узла (рекурсивно)
-                try:
-                    # Пробуем рекурсивный метод
-                    all_descendants = self.db_session.get_all_descendants(node_id)
-                except RecursionError:
-                # Если слишком глубокая рекурсия, используем итеративный
-                    all_descendants = self.db_session.get_all_descendants_iterative(node_id)
+                # try:
+                #     # Пробуем рекурсивный метод
+                #     all_descendants = self.db_session.get_all_descendants(node_id)
+                # except RecursionError:
+                # # Если слишком глубокая рекурсия, используем итеративный
+                #     all_descendants = self.db_session.get_all_descendants_iterative(node_id)
+                deleted_nodes, deleted_edges = self.graph_service.delete_node(node_id)
             
-                print(f"Удаляемые узлы: {all_descendants}")
-                print(f"Количество удаляемых узлов: {len(all_descendants)}")
+                print(f"Удаляемые узлы: {deleted_nodes}")
+                print(f"Количество удаляемых узлов: {len(deleted_nodes)}")
+                print(f"Удаляемые связи: {deleted_edges}")
             
-                # 3. Удаляем узел из БД (потомки удалятся каскадно благодаря ON DELETE CASCADE)
-                self.db_session.delete_node(node_id)
-                print(f"Узел {node_id} и все его потомки удалены из БД")
-                # 3.1 Удаляем папки attachments всех удаляемых узлов
-                for descendant_id in all_descendants:
-                    try:
-                        self.file_service.delete_node_folder(descendant_id)
-                    except Exception as e:
-                        print(f"Ошибка удаления папки узла {descendant_id}: {e}")
+            #     # 3. Удаляем узел из БД (потомки удалятся каскадно благодаря ON DELETE CASCADE)
+            #     self.db_session.delete_node(node_id)
+            #     print(f"Узел {node_id} и все его потомки удалены из БД")
+            #     # 3.1 Удаляем папки attachments всех удаляемых узлов
+            #     for descendant_id in all_descendants:
+            #         try:
+            #             self.file_service.delete_node_folder(descendant_id)
+            #         except Exception as e:
+            #             print(f"Ошибка удаления папки узла {descendant_id}: {e}")
 
-                # 4. Удаляем все связи и узлы из сцены
-                # 4.1. Собираем все связи, которые нужно удалить
-                edges_to_delete = []
-                for edge_id, edge_item in list(self.scene.edges.items()):
-                    try:
-                        # Проверяем, связана ли связь с любым из удаляемых узлов
-                        if (edge_item.from_item.node_id in all_descendants or 
-                            edge_item.to_item.node_id in all_descendants):
-                            edges_to_delete.append(edge_id)
-                    except AttributeError:
-                        continue
+            #     # 4. Удаляем все связи и узлы из сцены
+            #     # 4.1. Собираем все связи, которые нужно удалить
+            #     edges_to_delete = []
+            #     for edge_id, edge_item in list(self.scene.edges.items()):
+            #         try:
+            #             # Проверяем, связана ли связь с любым из удаляемых узлов
+            #             if (edge_item.from_item.node_id in all_descendants or 
+            #                 edge_item.to_item.node_id in all_descendants):
+            #                 edges_to_delete.append(edge_id)
+            #         except AttributeError:
+            #             continue
             
-                print(f"Удаляемые связи: {edges_to_delete}")
+            #     print(f"Удаляемые связи: {edges_to_delete}")
             
-                # 4.2. Удаляем связи
-                for edge_id in edges_to_delete:
-                    edge_item = self.scene.edges.pop(edge_id, None)
-                    if edge_item:
-                        self.scene.removeItem(edge_item)
-                        print(f"Удалена связь {edge_id}")
+            #     # 4.2. Удаляем связи
+            #     for edge_id in edges_to_delete:
+            #         edge_item = self.scene.edges.pop(edge_id, None)
+            #         if edge_item:
+            #             self.scene.removeItem(edge_item)
+            #             print(f"Удалена связь {edge_id}")
             
-                # 4.3. Удаляем все узлы (включая потомков)
-                for descendant_id in all_descendants:
-                    node_item = self.scene.nodes.get(descendant_id)
+            #     # 4.3. Удаляем все узлы (включая потомков)
+            #     for descendant_id in all_descendants:
+            #         node_item = self.scene.nodes.get(descendant_id)
+            #         if node_item:
+            #             self.scene.removeItem(node_item)
+            #             del self.scene.nodes[descendant_id]
+            #             print(f"Удален узел {descendant_id} из сцены")
+            
+            #     # 5. Обновляем родительский узел (если он не был удален)
+            #     if parent_id and parent_id not in all_descendants:
+            #         # Проверяем, остались ли у родителя другие дети
+            #         remaining_children = self.db_session.get_children(parent_id)
+            #         has_children_remaining = len(remaining_children) > 0
+                
+            #         parent_item = self.scene.nodes.get(parent_id)
+            #         if parent_item:
+            #             parent_item.set_has_children(has_children_remaining)
+            #             print(f"Родительский узел {parent_id} обновлен, has_children={has_children_remaining}")
+            
+            #     print(f"=== РЕКУРСИВНОЕ УДАЛЕНИЕ УЗЛА {node_id} ЗАВЕРШЕНО ===\n")
+            
+            # except Exception as e:
+            #     print(f"КРИТИЧЕСКАЯ ОШИБКА при рекурсивном удалении узла {node_id}: {e}")
+            #     import traceback
+            #     traceback.print_exc()
+            
+            #     QMessageBox.critical(
+            #         self, "Ошибка удаления",
+            #         f"Не удалось удалить узел и всех его потомков:\n{str(e)}"
+            #     )
+
+                # Удаляем связи со сцены
+                for edge_id in deleted_edges:
+                    self.scene.remove_edge(edge_id)
+
+                # Удаляем узлы со сцены
+                for nid in deleted_nodes:
+                    node_item = self.scene.nodes.get(nid)
                     if node_item:
                         self.scene.removeItem(node_item)
-                        del self.scene.nodes[descendant_id]
-                        print(f"Удален узел {descendant_id} из сцены")
-            
-                # 5. Обновляем родительский узел (если он не был удален)
-                if parent_id and parent_id not in all_descendants:
-                    # Проверяем, остались ли у родителя другие дети
-                    remaining_children = self.db_session.get_children(parent_id)
-                    has_children_remaining = len(remaining_children) > 0
-                
+                        del self.scene.nodes[nid]
+                        print(f"Удален узел {nid} из сцены")
+
+                # Обновляем родительский узел (если он не был удалён)
+                if parent_id and parent_id not in deleted_nodes:
+                    remaining_children = self.graph_service.get_children(parent_id)
+                    has_children = len(remaining_children) > 0
                     parent_item = self.scene.nodes.get(parent_id)
                     if parent_item:
-                        parent_item.set_has_children(has_children_remaining)
-                        print(f"Родительский узел {parent_id} обновлен, has_children={has_children_remaining}")
-            
+                        parent_item.set_has_children(has_children)
+                        print(f"Родительский узел {parent_id} обновлен, has_children={has_children}")
+
                 print(f"=== РЕКУРСИВНОЕ УДАЛЕНИЕ УЗЛА {node_id} ЗАВЕРШЕНО ===\n")
-            
+
             except Exception as e:
                 print(f"КРИТИЧЕСКАЯ ОШИБКА при рекурсивном удалении узла {node_id}: {e}")
                 import traceback
                 traceback.print_exc()
-            
                 QMessageBox.critical(
                     self, "Ошибка удаления",
                     f"Не удалось удалить узел и всех его потомков:\n{str(e)}"
@@ -632,20 +625,20 @@ class MainWindow(QMainWindow):
             
     def delete_edge(self, edge_id: int):
         """Удаление связи"""
-        self.db_session.delete_edge(edge_id)
+        self.graph_service.delete_edge(edge_id)
         self.scene.delete_edge(edge_id)
     
     def update_node_position(self, node_id: int, x: float, y: float):
         """Обновление позиции узла"""
-        self.db_session.update_node_position(node_id, x, y)
+        self.graph_service.update_node_position(node_id, x, y)
     
     def update_node_color(self, node_id: int, color: str):
         """Обновление цвета узла"""
-        self.db_session.update_node_color(node_id, color)
+        self.graph_service.update_node_color(node_id, color)
     
     def toggle_node_collapsed(self, node_id: int, collapsed: bool):
         """Переключение состояния свернутоности узла"""
-        self.db_session.toggle_node_collapsed(node_id)
+        self.graph_service.toggle_node_collapsed(node_id)
         # TODO: Скрыть/показать дочерние узлы
     
     def collapse_all_nodes(self):
@@ -660,7 +653,7 @@ class MainWindow(QMainWindow):
     
     def open_node_editor(self, node_id: int):
         """Открытие редактора узла"""
-        node = self.db_session.get_node(node_id)
+        node = self.graph_service.get_node(node_id)
 
         if node.content is None:
             node.content = NodeContent(node_id=node.id)
@@ -676,14 +669,16 @@ class MainWindow(QMainWindow):
     def save_data(self):
         """Сохранение данных"""
         try:
-            self.db_session.conn.commit()
+            #self.db_session.conn.commit()
+            self.graph_service.commit()
             self.status_bar.showMessage("Данные сохранены", 3000)
         except Exception as e:
             QMessageBox.warning(self, "Ошибка", f"Не удалось сохранить данных: {str(e)}")
     
     def autosave(self):
         """Автосохранение"""
-        if self.db_session:
+        #if self.db_session:
+        if hasattr(self, 'graph_service') and self.graph_service:
             self.save_data()
     
     def toggle_theme(self):
@@ -691,13 +686,6 @@ class MainWindow(QMainWindow):
         self.dark_mode = not self.dark_mode
         self.save_theme_setting(self.dark_mode)
         self.apply_theme()
-    #    self.update_all_dialogs_theme()
-
-    # def update_all_dialogs_theme(self):
-    #     """Обновить тему во всех открытых диалогах"""
-    #     for widget in QApplication.topLevelWidgets():
-    #         if isinstance(widget, NodeContentEditorDialog):
-    #             widget.apply_theme()
     
     def apply_theme(self):
         """Применить текущую тему на основе self.dark_mode"""
@@ -749,32 +737,20 @@ class MainWindow(QMainWindow):
         self.update()
         
     
+    # def closeEvent(self, event):
+    #     """Обработка закрытия окна"""
+    #     self.save_data()
+        
+    #     if self.db_session:
+    #         self.db_session.close()
+        
+    #     event.accept()
     def closeEvent(self, event):
         """Обработка закрытия окна"""
         self.save_data()
-        
-        if self.db_session:
-            self.db_session.close()
-        
+        if hasattr(self, 'graph_service') and self.graph_service:
+            self.graph_service.close()
         event.accept()
-
-    #def add_child_node(self, parent_id: int, title: str, x: float, y: float):
-    #    """Добавление дочернего узла"""
-    #    try:
-    #        node = self.db_session.add_node(title, parent_id, x, y)
-    #        node_item = self.scene.add_node(node.id, node.title, x, y, node.color)
-
-             # Добавляем связь
-    #        edge = self.db_session.add_edge(parent_id, node.id)
-    #        self.scene.add_edge(edge.id, parent_id, node.id)
-        
-            # Обновляем флаг родителя
-    #        parent_item = self.scene.nodes.get(parent_id)
-    #        if parent_item:
-    #            parent_item.set_has_children(True)
-            
-    #    except Exception as e:
-    #        print(f"Ошибка при создании дочернего узла: {e}")
 
     # ====== УПРАВЛЕНИЕ ТЕМОЙ И КОНФИГОМ ======
     
