@@ -9,7 +9,7 @@ CONTENT REPOSITORY
 ========================================================================
 """
 
-from models import NodeContent
+from core.models import NodeContent
 
 
 class ContentRepository:

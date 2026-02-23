@@ -30,17 +30,17 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QPointF, QRectF, QDate, QUrl, QFileInfo
 from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap, QPainter, QBrush, QDesktopServices
 
-from ui_graph_scene import GraphScene, GraphView
-from database import DatabaseManager, EncryptedSQLite
-from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
-from core import (
-    FileService, ContentService, 
-    ContentRepository, GraphService
-)
-from ui import (
-    NodeContentEditorDialog, set_dark_mode, get_stylesheet,
-    is_dark_mode
-)
+from ui.graph_scene import GraphScene, GraphView
+
+from core.content_repository import ContentRepository
+from core.content_service import ContentService
+from core.database import DatabaseManager, EncryptedSQLite
+from core.file_service import FileService
+from core.graph_service import GraphService
+from core.models import ContentTab, ContentTabType, Node, Edge, LineType, NodeContent
+
+from ui.editor_dialog import NodeContentEditorDialog
+from ui.themes import set_dark_mode, get_stylesheet, is_dark_mode
 
 
 

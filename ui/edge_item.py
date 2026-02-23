@@ -17,8 +17,7 @@ from PyQt6.QtWidgets import QGraphicsObject, QGraphicsItem, QMenu, QStyle
 from PyQt6.QtCore import Qt, QPointF, pyqtSignal, QRectF
 from PyQt6.QtGui import QPainter, QPainterPath, QPen, QColor, QAction, QBrush, QTransform 
 
-#from .ui_node_item import NodeItem
-from models import LineType
+from core.models import LineType
 
 
 class EdgeItem(QGraphicsObject):  # ← ИЗМЕНИЛИ НА QGraphicsObject

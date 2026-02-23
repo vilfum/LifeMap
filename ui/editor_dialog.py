@@ -29,19 +29,18 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QPointF, QRectF, QDate, QUrl, QFileInfo
 from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap, QPainter, QBrush, QDesktopServices
 
-#from ui_graph_scene import GraphScene, GraphView
-#from database import DatabaseManager, EncryptedSQLite
-from models import ContentTab, Node, Edge, LineType, NodeContent, ContentTabType
-
-from core import ContentService, ContentRepository
+from core.content_repository import ContentRepository
+from core.content_service import ContentService
+from core.models import ContentTab, ContentTabType, Node, Edge, LineType, NodeContent
 
 from ui.themes import is_dark_mode
 
-from widgets import (
-    BaseTabWidget, TextTabWidget,
-    ListTabWidget, TodoTabWidget,
-    DatesTabWidget, FilesTabWidget
-    )
+from widgets.date_tab import BaseTabWidget
+from widgets.date_tab import DatesTabWidget
+from widgets.files_tab import FilesTabWidget
+from widgets.list_tab import ListTabWidget
+from widgets.text_tab import TextTabWidget
+from widgets.todo_tab import TodoTabWidget
 
 #if TYPE_CHECKING:
 #    from ui_main_window import MainWindow

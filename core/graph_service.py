@@ -4,8 +4,8 @@
 ========================================================================
 """
 from typing import List, Optional, Tuple
-from models import Node, Edge
-from core import FileService
+from core.file_service import FileService
+from core.models import Node, Edge
 
 
 class GraphService:
@@ -99,7 +99,7 @@ class GraphService:
 
     def get_edges_for_node(self, node_id: int) -> List[int]:
         """Возвращает ID всех ребер, связанных с узлом"""
-        edges = self.db_session.get_edges_for_node(node_id)
+        edges = self.db_session.get_node_edges(node_id)
         return [e.id for e in edges]
 
     def delete_edge(self, edge_id: int) -> None:

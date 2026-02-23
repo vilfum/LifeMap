@@ -25,7 +25,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import base64
 
-from models import *
+from core.models import *
 
 
 class EncryptedSQLite:

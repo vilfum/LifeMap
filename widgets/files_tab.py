@@ -145,6 +145,8 @@ class FilesTabWidget(BaseTabWidget):
 
         self.list_widget.addItem(item)
         self.mark_dirty()
+        self.save_to_model()
+        
 
 
     # --------------------------------------------------

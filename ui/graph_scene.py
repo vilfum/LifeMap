@@ -17,9 +17,9 @@ from PyQt6.QtWidgets import QGraphicsScene, QGraphicsView, QMenu, QFrame
 from PyQt6.QtCore import Qt, QPointF, pyqtSignal, QPoint
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QAction
 
-from ui_node_item import NodeItem
-from ui_edge_item import EdgeItem
-from models import LineType
+from ui.node_item import NodeItem
+from ui.edge_item import EdgeItem
+from core.models import LineType
 
 
 class GraphScene(QGraphicsScene):

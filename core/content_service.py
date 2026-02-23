@@ -11,7 +11,7 @@ CONTENT SERVICE
 """
 
 from typing import Optional, List
-from models import NodeContent, ContentTab, ContentTabType
+from core.models import NodeContent, ContentTab, ContentTabType
 
 
 class ContentService:
