@@ -1,10 +1,6 @@
 ﻿"""
-Главное окно приложения
-"""
-
-"""
 ========================================================================
-ГЛАВНОЕ ОКНО "КАРТЫ ЖИЗНИ"
+ГЛАВНОЕ ОКНО ПРИЛОЖЕНИЯ "КАРТА ЖИЗНИ"
 ========================================================================
 ЧАСТЬ ПРОЕКТА: Карта жизни (Альфа-версия 1.0)
 АВТОР: vilfum
@@ -14,7 +10,10 @@
 ========================================================================
 """
 
-print("main_window.py loaded")
+"""
+Главное окно приложения
+"""
+print("ui_main_window.py loaded")
 import sys
 from pathlib import Path
 from typing import Optional, cast
@@ -33,15 +32,15 @@ from PyQt6.QtGui import QIcon, QKeySequence, QPalette, QColor, QAction, QPixmap,
 
 from ui.graph_scene import GraphScene, GraphView
 
-from core.content_repository import ContentRepository
-from core.content_service import ContentService
-from core.database import DatabaseManager, EncryptedSQLite
-from core.file_service import FileService
-from core.graph_service import GraphService
-from core.models import ContentTab, ContentTabType, Node, Edge, LineType, NodeContent
-
-from ui.editor_dialog import NodeContentEditorDialog
-from ui.themes import set_dark_mode, get_stylesheet, is_dark_mode
+from core import (
+    FileService, ContentService, ContentRepository, GraphService,
+    DatabaseManager, EncryptedSQLite, ContentTab, Node, 
+    Edge, LineType, NodeContent, ContentTabType
+)
+from ui import (
+    NodeContentEditorDialog, set_dark_mode, get_stylesheet,
+    is_dark_mode
+)
 
 
 
