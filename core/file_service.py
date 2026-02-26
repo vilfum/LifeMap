@@ -19,16 +19,20 @@ import shutil
 
 
 class FileService:
+    """Сервис для работы с файловыми вложениями"""
+
     def __init__(self, base_path="data/attachments"):
         self.base_path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
 
     def get_node_folder(self, node_id):
+        """Получение папки узла"""
         folder = self.base_path / f"node_{node_id}"
         folder.mkdir(parents=True, exist_ok=True)
         return folder
 
     def add_file(self, node_id, source_path):
+        """Добавление файла в папку узла"""
         source_path = Path(source_path)
         if not source_path.exists():
             return None
@@ -47,14 +51,17 @@ class FileService:
         return destination  # возвращаем полный путь
 
     def remove_file(self, file_path):
+        """Удаление файла"""
         file_path = Path(file_path)
         if file_path.exists():
             file_path.unlink()
 
     def file_exists(self, file_path):
+        """Проверка существования файла"""
         return Path(file_path).exists()
     
     def delete_node_folder(self, node_id):
+        """Удаление папки узла и всех вложенных файлов (при удалении узла)"""
         folder = self.base_path / f"node_{node_id}"
         if folder.exists():
             try:

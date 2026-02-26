@@ -16,6 +16,7 @@
 
 from core.models import NodeContent
 
+
 class ContentRepository:
 
     @staticmethod

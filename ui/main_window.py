@@ -44,7 +44,6 @@ from ui.editor_dialog import NodeContentEditorDialog
 from ui.themes import set_dark_mode, get_stylesheet, is_dark_mode
 
 
-
 class PasswordDialog(QDialog):
     """Диалог ввода пароля"""
     
@@ -147,21 +146,6 @@ class MainWindow(QMainWindow):
         self.scene = GraphScene()
         self.view = GraphView(self.scene)
 
-        # ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ ДЛЯ УДАЛЕНИЯ ГРАНИЦ:
-        #self.view.setStyleSheet("""
-        #    QGraphicsView {
-        #        border: 0px;
-        #        padding: 0px;
-        #        margin: 0px;
-        #        outline: none;
-        #        background: transparent;
-        #    }
-        #    QGraphicsView:focus {
-        #        border: 0px;
-        #        outline: none;
-        #    }
-        #""")
-        
         # Подключаем сигналы сцены
         self.scene.nodeDoubleClicked.connect(self.open_node_editor)
         self.scene.nodePositionChanged.connect(self.update_node_position)
@@ -247,45 +231,6 @@ class MainWindow(QMainWindow):
     
     def show_login_dialog(self):
         """Показать диалог входа"""
-        #print("show_login_dialog: start")
-        #dialog = PasswordDialog(self)
-        #print("show_login_dialog: dialog created")
-        #result = dialog.exec()
-        #print(f"show_login_dialog: dialog.exec() returned {result}")
-        #if result == QDialog.DialogCode.Accepted:
-        #    self.password = dialog.get_password()
-        #    print("show_login_dialog: accepted, calling init_database")
-        #    self.init_database()
-        #    if dialog.get_remember():
-        #        print("show_login_dialog: remember checked")
-        #else:
-        #    print("show_login_dialog: rejected, quitting")
-        #    QApplication.quit()
-        #print("show_login_dialog: end")
-        #dialog = PasswordDialog(self)
-        
-        # Пробуем загрузить сохраненный пароль
-        #try:
-        #    settings_path = Path("data/settings.json")
-        #    if settings_path.exists():
-        #        import json
-        #        with open(settings_path, 'r', encoding='utf-8') as f:
-        #            settings = json.load(f)
-        #            if 'remember_password' in settings and settings['remember_password']:
-                        # TODO: Безопасное хранение пароля
-        #                pass
-        #except:
-        #    pass
-        
-        #if dialog.exec() == QDialog.DialogCode.Accepted:
-        #    self.password = dialog.get_password()
-        #    self.init_database()
-            
-        #    if dialog.get_remember():
-        #        # TODO: Сохранить настройку
-        #        pass
-        #else:
-        #    QApplication.quit()
         if self._login_shown:
             return
         self._login_shown = True
@@ -432,47 +377,6 @@ class MainWindow(QMainWindow):
             child_x = round(parent_x / grid) * grid
             child_y = round((parent_y + 2 * grid) / grid) * grid
         
-            # Создаём узел в БД
-        #     node = self.db_session.add_node(title, parent_id, child_x, child_y)
-        #     if not node:
-        #         print("ОШИБКА: не удалось создать узел в БД")
-        #         return None
-        
-        #     # Добавляем узел на сцену (один раз!)
-        #     node_item = self.scene.add_node(node.id, node.title, child_x, child_y, node.color)
-        
-        #     # Создаём связь в БД
-        #     edge = self.db_session.add_edge(parent_id, node.id)
-        #     if edge is None:
-        #         print(f"ОШИБКА: Не удалось создать связь в БД между {parent_id} и {node.id}")
-        #         return None
-        
-        #     # Добавляем связь на сцену
-        #     edge_item = self.scene.add_edge(edge.id, parent_id, node.id)
-        #     if edge_item is None:
-        #         print(f"ОШИБКА: EdgeItem не создан для связи {edge.id}")
-        #         print(f"  from_node_id={parent_id}, to_node_id={node.id}")
-        #         print(f"  from_item exists: {parent_id in self.scene.nodes}")
-        #         print(f"  to_item exists: {node.id in self.scene.nodes}")
-        #         from_item = self.scene.nodes.get(parent_id)
-        #         to_item = self.scene.nodes.get(node.id)
-        #         print(f"  from_item: {from_item}")
-        #         print(f"  to_item: {to_item}")
-        
-        #     # Обновляем флаг наличия детей у родителя
-        #     parent_item.set_has_children(True)
-        
-        #     # Сохраняем позицию для последующих корневых узлов (опционально)
-        #     self.last_node_pos = (child_x, child_y)
-        
-        #     print(f"Дочерний узел {node.id} создан на позиции ({child_x}, {child_y})")
-        #     return node_item
-        
-        # except Exception as e:
-        #     print(f"Ошибка при создании дочернего узла: {e}")
-        #     import traceback
-        #     traceback.print_exc()
-        #     return None
             node, edge = self.graph_service.add_child_node(parent_id, title, child_x, child_y)
 
             node_item = self.scene.add_node(node.id, node.title, child_x, child_y, node.color)
@@ -517,80 +421,12 @@ class MainWindow(QMainWindow):
                     return
             
                 parent_id = node.parent_id
-                # 2. Получаем ВСЕХ потомков узла (рекурсивно)
-                # try:
-                #     # Пробуем рекурсивный метод
-                #     all_descendants = self.db_session.get_all_descendants(node_id)
-                # except RecursionError:
-                # # Если слишком глубокая рекурсия, используем итеративный
-                #     all_descendants = self.db_session.get_all_descendants_iterative(node_id)
+                
                 deleted_nodes, deleted_edges = self.graph_service.delete_node(node_id)
             
                 print(f"Удаляемые узлы: {deleted_nodes}")
                 print(f"Количество удаляемых узлов: {len(deleted_nodes)}")
                 print(f"Удаляемые связи: {deleted_edges}")
-            
-            #     # 3. Удаляем узел из БД (потомки удалятся каскадно благодаря ON DELETE CASCADE)
-            #     self.db_session.delete_node(node_id)
-            #     print(f"Узел {node_id} и все его потомки удалены из БД")
-            #     # 3.1 Удаляем папки attachments всех удаляемых узлов
-            #     for descendant_id in all_descendants:
-            #         try:
-            #             self.file_service.delete_node_folder(descendant_id)
-            #         except Exception as e:
-            #             print(f"Ошибка удаления папки узла {descendant_id}: {e}")
-
-            #     # 4. Удаляем все связи и узлы из сцены
-            #     # 4.1. Собираем все связи, которые нужно удалить
-            #     edges_to_delete = []
-            #     for edge_id, edge_item in list(self.scene.edges.items()):
-            #         try:
-            #             # Проверяем, связана ли связь с любым из удаляемых узлов
-            #             if (edge_item.from_item.node_id in all_descendants or 
-            #                 edge_item.to_item.node_id in all_descendants):
-            #                 edges_to_delete.append(edge_id)
-            #         except AttributeError:
-            #             continue
-            
-            #     print(f"Удаляемые связи: {edges_to_delete}")
-            
-            #     # 4.2. Удаляем связи
-            #     for edge_id in edges_to_delete:
-            #         edge_item = self.scene.edges.pop(edge_id, None)
-            #         if edge_item:
-            #             self.scene.removeItem(edge_item)
-            #             print(f"Удалена связь {edge_id}")
-            
-            #     # 4.3. Удаляем все узлы (включая потомков)
-            #     for descendant_id in all_descendants:
-            #         node_item = self.scene.nodes.get(descendant_id)
-            #         if node_item:
-            #             self.scene.removeItem(node_item)
-            #             del self.scene.nodes[descendant_id]
-            #             print(f"Удален узел {descendant_id} из сцены")
-            
-            #     # 5. Обновляем родительский узел (если он не был удален)
-            #     if parent_id and parent_id not in all_descendants:
-            #         # Проверяем, остались ли у родителя другие дети
-            #         remaining_children = self.db_session.get_children(parent_id)
-            #         has_children_remaining = len(remaining_children) > 0
-                
-            #         parent_item = self.scene.nodes.get(parent_id)
-            #         if parent_item:
-            #             parent_item.set_has_children(has_children_remaining)
-            #             print(f"Родительский узел {parent_id} обновлен, has_children={has_children_remaining}")
-            
-            #     print(f"=== РЕКУРСИВНОЕ УДАЛЕНИЕ УЗЛА {node_id} ЗАВЕРШЕНО ===\n")
-            
-            # except Exception as e:
-            #     print(f"КРИТИЧЕСКАЯ ОШИБКА при рекурсивном удалении узла {node_id}: {e}")
-            #     import traceback
-            #     traceback.print_exc()
-            
-            #     QMessageBox.critical(
-            #         self, "Ошибка удаления",
-            #         f"Не удалось удалить узел и всех его потомков:\n{str(e)}"
-            #     )
 
                 # Удаляем связи со сцены
                 for edge_id in deleted_edges:
@@ -670,7 +506,6 @@ class MainWindow(QMainWindow):
     def save_data(self):
         """Сохранение данных"""
         try:
-            #self.db_session.conn.commit()
             self.graph_service.commit()
             self.status_bar.showMessage("Данные сохранены", 3000)
         except Exception as e:
@@ -678,7 +513,6 @@ class MainWindow(QMainWindow):
     
     def autosave(self):
         """Автосохранение"""
-        #if self.db_session:
         if hasattr(self, 'graph_service') and self.graph_service:
             self.save_data()
     
@@ -733,19 +567,9 @@ class MainWindow(QMainWindow):
         stylesheet = get_stylesheet()
         app.setStyleSheet(stylesheet)
         # Обновляем все виджеты
-        #self.update_all_dialogs_theme()
         app.processEvents()
         self.update()
-        
-    
-    # def closeEvent(self, event):
-    #     """Обработка закрытия окна"""
-    #     self.save_data()
-        
-    #     if self.db_session:
-    #         self.db_session.close()
-        
-    #     event.accept()
+
     def closeEvent(self, event):
         """Обработка закрытия окна"""
         self.save_data()
@@ -796,6 +620,3 @@ class MainWindow(QMainWindow):
             print(f"Тема сохранена: {'Темная' if dark_mode else 'Светлая'}")
         except Exception as e:
             print(f"Ошибка при сохранении конфига: {e}")
-
-
-    

@@ -128,7 +128,6 @@ class NodeContent:
     node_id: int
     tabs: list[ContentTab] = field(default_factory=list)
 
-    
     def to_dict(self):
         return {
             'tabs': [tab.to_dict() for tab in self.tabs]
@@ -188,12 +187,14 @@ class Edge:
             'color': self.color
         }
 
+
 class ContentTabType(Enum):
     TEXT = "text"
     FILES = "files"
     LIST = "list"
     TODO = "todo"
     DATES = "dates"
+
 
 @dataclass
 class ContentTab:

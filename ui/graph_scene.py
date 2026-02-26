@@ -25,7 +25,6 @@ from core.models import LineType
 
 class GraphScene(QGraphicsScene):
     """Графическая сцена для карты жизни"""
-    
     # Сигналы
     nodeDoubleClicked = pyqtSignal(int)  # ID узла
     nodePositionChanged = pyqtSignal(int, float, float)  # ID узла, x, y
@@ -101,8 +100,6 @@ class GraphScene(QGraphicsScene):
         
         try:
             edge_item = EdgeItem(edge_id, from_item, to_item, line_type, color)
-            #if hasattr(edge_item, 'deleted'):
-                #edge_item.deleted.connect(self.deleteEdgeRequested.emit)
             
             self.addItem(edge_item)
             edge_item.setZValue(-1)  # Помещаем под узлы
@@ -191,44 +188,6 @@ class GraphScene(QGraphicsScene):
             if isinstance(item, NodeItem):
                 return item
         return None
-    
-    #def mousePressEvent(self, event):
-        #"""Обработка нажатия мыши"""
-        #if event.button() == Qt.MouseButton.RightButton:
-            # Если клик по пустому месту
-            #item = self.get_node_at(event.scenePos())
-            #if not item:
-                #self.dragging = True
-                #self.drag_start = event.scenePos()
-                #event.accept()
-                #return
-        
-        #super().mousePressEvent(event)
-    
-    #def mouseMoveEvent(self, event):
-        #"""Обработка перемещения мыши"""
-        #if self.dragging:
-            # Перетаскивание всей сцены
-            #delta = event.scenePos() - self.drag_start
-            #self.drag_start = event.scenePos()
-            
-            # Перемещаем все видимые элементы
-            #for item in self.items():
-                #if isinstance(item, (NodeItem, EdgeItem)):
-                    #item.setPos(item.pos() + delta)
-            
-            #event.accept()
-        #else:
-            #super().mouseMoveEvent(event)
-    
-    #def mouseReleaseEvent(self, event):
-        #"""Обработка отпускания мыши"""
-        #if self.dragging and event.button() == Qt.MouseButton.RightButton:
-            #self.dragging = False
-            #event.accept()
-            #return
-        
-        #super().mouseReleaseEvent(event)
     
     def drawBackground(self, painter, rect):
         """Отрисовка фона с сеткой - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
@@ -320,18 +279,6 @@ class GraphView(QGraphicsView):
         
         # Убираем рамку у view
         self.setFrameShape(QFrame.Shape.NoFrame)  # ← Вместо 0 QFrame.Shape.NoFrame
-        
-        # Устанавливаем стиль для rubber band (выделения области)
-        #self.setStyleSheet("""
-            #QGraphicsView {
-                #border: 0px;
-                #background: transparent;
-            #}
-            #QGraphicsView::rubberBand {
-                #border: 2px dashed #2196F3;
-                #background-color: rgba(33, 150, 243, 30);
-            #}
-        #""")
 
         # Масштабирование
         self.zoom_factor = 1.0

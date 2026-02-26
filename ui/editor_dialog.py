@@ -59,7 +59,7 @@ class TitleEditField(QLineEdit):
         if not self._is_finishing:
             self._is_finishing = True
             self.should_save = True  # При потере фокуса - сохраняем
-            # Даём время для обработки других событий
+            # Даем время для обработки других событий
             QTimer.singleShot(0, self._complete_edit)
         super().focusOutEvent(event)
     
@@ -103,7 +103,7 @@ class TabRenameEditField(QLineEdit):
         if not self._is_finishing:
             self._is_finishing = True
             self.should_save = True  # При потере фокуса - сохраняем
-            # Даём время для обработки других событий
+            # Даем время для обработки других событий
             QTimer.singleShot(0, self._complete_edit)
         super().focusOutEvent(event)
     
@@ -148,7 +148,7 @@ class NodeContentEditorDialog(QDialog):
         self.setWindowTitle("Содержимое узла")
         self.resize(800, 600)
 
-        # ====== ИНИЦИАЛИЗАЦИЯ ФЛАГОВ ======
+        # Инициализация флагов
         self._editing_title = False
         self._tab_edit_active = False
 
@@ -211,200 +211,14 @@ class NodeContentEditorDialog(QDialog):
 
         self.finished.connect(lambda: self.save_node_content())
 
-        
     def get_main_window(self):
         """Получить экземпляр MainWindow, обходя родителей"""
         parent = self.parent()
         while parent:
-            #if isinstance(parent, MainWindow):
             if hasattr(parent, 'dark_mode') and hasattr(parent, 'scene'):
                 return parent
             parent = parent.parent()
         return None
-
-    # def apply_theme(self):
-    #     """Применить тему на основе родительского MainWindow"""
-    #     main_window = self.get_main_window()
-    #     if not main_window:
-    #         return
-
-    #     self.dark_mode = main_window.dark_mode   # <-- СОХРАНЯЕМ ТЕМУ В ДИАЛОГЕ
-    #     dark_mode = main_window.dark_mode if hasattr(main_window, 'dark_mode') else False
-    #     app = QApplication.instance()
-    
-    #     # Копируем палитру и стиль приложения (базовые настройки)
-    #     self.setPalette(app.palette())
-    #     self.setStyle(app.style())
-    
-    #     # --- ЯВНЫЕ СТИЛИ ДЛЯ ВСЕХ ВИДЖЕТОВ ДИАЛОГА ---
-    #     if dark_mode:
-    #         self.setStyleSheet("""
-    #             NodeContentEditorDialog {
-    #                 background-color: #353535;
-    #                 color: white;
-    #             }
-    #             NodeContentEditorDialog QLabel {
-    #                 color: white;
-    #                 background-color: transparent;
-    #             }
-    #             NodeContentEditorDialog QLineEdit {
-    #                 background-color: #252525;
-    #                 color: white;
-    #                 border: 1px solid #555;
-    #                 padding: 3px;
-    #             }
-    #             NodeContentEditorDialog QTextEdit {
-    #                 background-color: #252525;
-    #                 color: white;
-    #                 border: 1px solid #555;
-    #             }
-    #             NodeContentEditorDialog QListWidget {
-    #                 background-color: #252525;
-    #                 color: white;
-    #                 border: 1px solid #555;
-    #             }
-    #             NodeContentEditorDialog QListWidget::item:selected {
-    #                 background-color: #2a82da;
-    #                 color: white;
-    #             }
-    #             NodeContentEditorDialog QPushButton {
-    #                 background-color: #404040;
-    #                 color: white;
-    #                 border: 1px solid #555;
-    #                 padding: 5px;
-    #                 border-radius: 3px;
-    #             }
-    #             NodeContentEditorDialog QPushButton:hover {
-    #                 background-color: #505050;
-    #             }
-    #             NodeContentEditorDialog QPushButton:pressed {
-    #                 background-color: #606060;
-    #             }
-    #             NodeContentEditorDialog QTabWidget::pane {
-    #                 border: 1px solid #555;
-    #                 background-color: #353535;
-    #             }
-    #             NodeContentEditorDialog QTabBar::tab {
-    #                 background-color: #404040;
-    #                 color: white;
-    #                 padding: 8px 15px;
-    #                 margin-right: 2px;
-    #                 border-top-left-radius: 4px;
-    #                 border-top-right-radius: 4px;
-    #             }
-    #             NodeContentEditorDialog QTabBar::tab:selected {
-    #                 background-color: #505050;
-    #             }
-    #             NodeContentEditorDialog QTabBar::tab:hover:!selected {
-    #                 background-color: #454545;
-    #             }
-    #             NodeContentEditorDialog QDateEdit {
-    #                 background-color: #252525;
-    #                 color: white;
-    #                 border: 1px solid #555;
-    #                 padding: 3px;
-    #             }
-                
-    #             NodeContentEditorDialog QMenu {
-    #                 background-color: #353535;
-    #                 color: white;
-    #                 border: 1px solid #555;
-    #             }
-    #             NodeContentEditorDialog QMenu::item:selected {
-    #                 background-color: #2a82da;
-    #             }
-    #         """)
-    #     else:
-    #         self.setStyleSheet("""
-    #             NodeContentEditorDialog {
-    #                 background-color: #f5f5f5;
-    #                 color: black;
-    #             }
-    #             NodeContentEditorDialog QLabel {
-    #                 color: black;
-    #                 background-color: transparent;
-    #             }
-    #             NodeContentEditorDialog QLineEdit {
-    #                 background-color: white;
-    #                 color: black;
-    #                 border: 1px solid #ccc;
-    #                 padding: 3px;
-    #             }
-    #             NodeContentEditorDialog QTextEdit {
-    #                 background-color: white;
-    #                 color: black;
-    #                 border: 1px solid #ccc;
-    #             }
-    #             NodeContentEditorDialog QListWidget {
-    #                 background-color: white;
-    #                 color: black;
-    #                 border: 1px solid #ccc;
-    #             }
-    #             NodeContentEditorDialog QListWidget::item:selected {
-    #                 background-color: #e0e0e0;
-    #                 color: black;
-    #             }
-    #             NodeContentEditorDialog QPushButton {
-    #                 background-color: #f0f0f0;
-    #                 color: black;
-    #                 border: 1px solid #ccc;
-    #                 padding: 5px;
-    #                 border-radius: 3px;
-    #             }
-    #             NodeContentEditorDialog QPushButton:hover {
-    #                 background-color: #e0e0e0;
-    #             }
-    #             NodeContentEditorDialog QPushButton:pressed {
-    #                 background-color: #d0d0d0;
-    #             }
-    #             NodeContentEditorDialog QTabWidget::pane {
-    #                 border: 1px solid #ccc;
-    #                 background-color: #f5f5f5;
-    #             }
-    #             NodeContentEditorDialog QTabBar::tab {
-    #                 background-color: #e0e0e0;
-    #                 color: black;
-    #                 padding: 8px 15px;
-    #                 margin-right: 2px;
-    #                 border-top-left-radius: 4px;
-    #                 border-top-right-radius: 4px;
-    #             }
-    #             NodeContentEditorDialog QTabBar::tab:selected {
-    #                 background-color: #d0d0d0;
-    #             }
-    #             NodeContentEditorDialog QTabBar::tab:hover:!selected {
-    #                 background-color: #d0d0d0;
-    #             }
-    #             NodeContentEditorDialog QDateEdit {
-    #                 background-color: white;
-    #                 color: black;
-    #                 border: 1px solid #ccc;
-    #                 padding: 3px;
-    #             }
-                
-    #             NodeContentEditorDialog QMenu {
-    #                 background-color: white;
-    #                 color: black;
-    #                 border: 1px solid #ccc;
-    #             }
-    #             NodeContentEditorDialog QMenu::item:selected {
-    #                 background-color: #e0e0e0;
-    #             }
-    #        """)
-    #     # Обновляем тему во всех вкладках
-    #     for i in range(self.tabs.count()):
-    #         widget = self.tabs.widget(i)
-    #         if hasattr(widget, 'refresh_theme'):
-    #             widget.refresh_theme()
-                
-
-    #     self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-    #     self.setAutoFillBackground(True)
-    #     self.update()
-    #     # Принудительно обновляем геометрию и перерисовываем
-    #     self.update()
-    #     self.repaint()
-    #     QApplication.processEvents()
 
     def apply_theme(self):
         """Применить текущую тему"""
@@ -416,7 +230,6 @@ class NodeContentEditorDialog(QDialog):
             if hasattr(widget, 'refresh_theme'):
                 widget.refresh_theme()
         self.update()
-    
 
     def _build_ui(self):
         main_layout = QVBoxLayout(self)
@@ -449,7 +262,7 @@ class NodeContentEditorDialog(QDialog):
         self.tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabs.customContextMenuRequested.connect(self.on_tab_context_menu)
         
-        # Установим event filter для перехвата кликов
+        # Установка event filter для перехвата кликов
         self.tabs.installEventFilter(self)
 
     # ====== ЛОГИКА ======
@@ -469,9 +282,8 @@ class NodeContentEditorDialog(QDialog):
             # Выделяем текст в отдельном вызове после setFocus
             QTimer.singleShot(0, self.title_edit.selectAll)
 
-    # Сохранение нового названия узла
     def finish_title_edit(self, save=True):
-        # Проверяем флаг, чтобы не обрабатывать дважды
+        """Сохранение нового названия узла"""
         if not hasattr(self, "_editing_title") or not self._editing_title:
             # Если не в режиме редактирования, просто скрыть поле
             self.title_edit.setVisible(False)
@@ -489,8 +301,6 @@ class NodeContentEditorDialog(QDialog):
 
                     # --- СОХРАНЕНИЕ В БД ---
                     try:
-                        #parent = cast(MainWindow, self.parent())
-                        #parent.db_session.update_node_title(self.node.id, new_title)
                         if self.main_window:
                             self.main_window.db_session.update_node_title(self.node.id, new_title)
                         
@@ -514,6 +324,7 @@ class NodeContentEditorDialog(QDialog):
         self.title_label.setVisible(True)
 
     def start_rename_tab(self, index):
+        """Начать переименование вкладки по индексу"""
         if index < 0:
             return
 
@@ -538,6 +349,7 @@ class NodeContentEditorDialog(QDialog):
         self._tab_edit_active = True
 
     def finish_rename_tab(self, save=True):
+        """Завершить переименование вкладки"""
         # Проверяем флаг, чтобы не обрабатывать дважды
         if not getattr(self, "_tab_edit_active", False):
             return
@@ -590,9 +402,6 @@ class NodeContentEditorDialog(QDialog):
 
         tab = ContentService.add_tab(self.node.content, tab_type) 
 
-        #if tab not in self.node.content.tabs:
-        #    self.node.content.tabs.append(tab)
-
         widget = self.create_tab_widget(tab)
         index = self.tabs.addTab(widget, tab.title)
         self.tabs.setCurrentIndex(index)
@@ -603,8 +412,8 @@ class NodeContentEditorDialog(QDialog):
 
         self.save_node_content()
 
-    # Создание UI для вкладки (фабрика)
     def create_tab_widget(self, tab: ContentTab):
+        """Создание виджета для вкладки на основе ее типа"""
         node_content = self.node.content   # объект NodeContent
         if tab.tab_type == ContentTabType.TEXT:
             widget = TextTabWidget(node_content, tab)
@@ -626,10 +435,9 @@ class NodeContentEditorDialog(QDialog):
             pass
 
         return widget
-    
 
-    # Улучшенная версия сохранения с поддержкой флага "грязности" и специализированных виджетов
     def save_node_content(self):
+        """Сохранение содержимого узла с поддержкой флага "грязности" и спец. виджетов"""
         if self._is_saving:
             return
 
@@ -675,16 +483,16 @@ class NodeContentEditorDialog(QDialog):
         
         return super().eventFilter(obj, event)
 
-    # Обработка смены вкладки
     def on_tab_changed(self, index):
+        """Обработка смены вкладки"""
         if self._previous_tab_widget and hasattr(self._previous_tab_widget, "on_deactivate"):
             print("🔄 Переключение вкладки: деактивация предыдущей вкладки")
             self._previous_tab_widget.on_deactivate()
 
         self._previous_tab_widget = self.tabs.widget(index)
 
-    # Контекстное меню вкладок
     def on_tab_context_menu(self, pos):
+        """Контекстное меню вкладок"""
         index = self.tabs.tabBar().tabAt(pos)
         if index < 0:
             return
@@ -699,8 +507,8 @@ class NodeContentEditorDialog(QDialog):
         elif action == delete_action:
             self.confirm_delete_tab(index)
 
-    # Подтверждение удаления вкладки
     def confirm_delete_tab(self, index):
+        """Подтверждение удаления вкладки"""
         reply = QMessageBox.question(
             self,
             "Удаление вкладки",
@@ -711,8 +519,8 @@ class NodeContentEditorDialog(QDialog):
         if reply == QMessageBox.StandardButton.Yes:
             self.delete_tab(index)
 
-    # Удаление вкладки + сохранение
     def delete_tab(self, index):
+        """Удаление вкладки + сохранение"""
         widget = self.tabs.widget(index)
         tab = getattr(widget, "_content_tab", None)
 
@@ -726,7 +534,7 @@ class NodeContentEditorDialog(QDialog):
             ContentService.remove_tab(self.node.content, tab.tab_id)
             self.save_node_content()
 
-    # Сохранение перед закрытием
     def closeEvent(self, event):
+        """Сохранение перед закрытием"""
         self.save_node_content()
         super().closeEvent(event)
