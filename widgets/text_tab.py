@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import QTextEdit, QVBoxLayout
 from widgets import BaseTabWidget
 from core.content_service import ContentService
 
+
 class TextTabWidget(BaseTabWidget):
     """Виджет для текстовой вкладки"""
     def __init__(self, node_content, tab, parent=None):
@@ -38,19 +39,15 @@ class TextTabWidget(BaseTabWidget):
         # Подключаем обработчики событий *после* загрузки,
         # чтобы программная установка текста не пометила вкладку как изменённую
         self.editor.textChanged.connect(self.mark_dirty)
-        #self.editor.textChanged.connect(self._on_text_changed)
 
-    #def _on_text_changed(self):
-    #    self._dirty = True
-
-    # Загрузка текста из узла
     def load_from_model(self):
+        """Загрузка данных из модели"""
         html = self.tab.data.get("html", "")
         self.editor.setHtml(html)
         self._dirty = False
 
-    # Сохранение текста в узел
     def save_to_model(self):
+        """Сохранение текста в модель"""
         if not self._dirty:
             print("💾 TextTabWidget: нет изменений для сохранения")
             return  # Если нет изменений, не сохраняем

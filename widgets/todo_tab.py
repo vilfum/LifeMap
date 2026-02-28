@@ -19,20 +19,17 @@ from PyQt6.QtCore import Qt
 from widgets import BaseTabWidget
 from core.content_service import ContentService
 
+
 class TodoTabWidget(BaseTabWidget):
-    """
-    Вкладка TODO:
-    - список задач с чекбоксами
-    - автосохранение
-    """
+    """Виджет для вкладки со списком дел"""
 
     def __init__(self, node_content, content_tab, parent=None):
         super().__init__(node_content, content_tab, parent)
         self.build_ui()
         self.load_from_model()
 
-    # Создание интерфейса
     def build_ui(self):
+        """Построение интерфейса вкладки"""
         layout = QVBoxLayout(self)
 
         # Список задач
@@ -64,14 +61,13 @@ class TodoTabWidget(BaseTabWidget):
         self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
 
-        
         # Сигналы
         self.add_button.clicked.connect(self.add_item)
         self.remove_button.clicked.connect(self.remove_item)
         self.list_widget.itemChanged.connect(self.on_item_changed)
 
-    # Добавление задачи
     def add_item(self):
+        """Добавление задачи"""
         item_text = f"Новый элемент {self.list_widget.count() + 1}"
         item = QListWidgetItem(item_text)
         self.list_widget.addItem(item) 
@@ -79,25 +75,23 @@ class TodoTabWidget(BaseTabWidget):
         item.setCheckState(Qt.CheckState.Unchecked)
         self.list_widget.setCurrentItem(item)
         self.list_widget.editItem(item)
-        self.mark_dirty()  # Помечаем как измененное
+        self.mark_dirty()
 
-    # Удаление задачи
     def remove_item(self):
+        """Удаление задачи"""
         current_item = self.list_widget.currentItem()
         if current_item:
             row = self.list_widget.row(current_item)
             self.list_widget.takeItem(row)
-            self.mark_dirty()  # Помечаем как измененное
+            self.mark_dirty()
 
-    # Реакция на чекбокс
     def on_item_changed(self, item):
-        self.mark_dirty()  # Помечаем как измененное
-        # Ничего не делаем здесь
-        # Сохранение произойдёт при деактивации вкладки
+        """Реакция на чекбокс"""
+        self.mark_dirty()
         pass
 
-    # Загрузка данных из модели
     def load_from_model(self):
+        """Загрузка данных из модели"""
         self.list_widget.clear()
 
         # Временно отключаем сигнал, чтобы не вызывать mark_dirty при загрузке
@@ -115,8 +109,8 @@ class TodoTabWidget(BaseTabWidget):
         
         self._dirty = False  # Сбрасываем флаг изменений после загрузки
 
-    # Сохранение данных в модель
     def save_to_model(self):
+        """Сохранение данных в модель"""
         if not self._dirty:
             print("💾 ListTabWidget: нет изменений для сохранения")
             return  # Если нет изменений, не сохраняем
@@ -132,7 +126,6 @@ class TodoTabWidget(BaseTabWidget):
         self.list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
 
-        #self.tab.data["items"] = items
         new_data = {"items": items}
         ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
         self._dirty = False  # Сбрасываем флаг изменений
@@ -140,7 +133,7 @@ class TodoTabWidget(BaseTabWidget):
 
     def on_item_changed(self, item):
         """Вызывается при изменении текста элемента (редактировании)"""
-        self.mark_dirty()  # Помечаем как измененное
+        self.mark_dirty()
 
     def on_data_changed(self, topLeft, bottomRight, roles):
         """Вызывается при изменении данных в модели"""

@@ -19,6 +19,7 @@ from PyQt6.QtCore import Qt
 from widgets import BaseTabWidget
 from core.content_service import ContentService
 
+
 class ListTabWidget(BaseTabWidget):
     """Виджет для вкладки со списком"""
     def __init__(self, node_content, tab, parent=None):
@@ -106,20 +107,9 @@ class ListTabWidget(BaseTabWidget):
         if not self._dirty:
             print("💾 ListTabWidget: нет изменений для сохранения")
             return  # Если нет изменений, не сохраняем
-        
-        # Собираем все элементы списка
-        #items = []
-        #for i in range(self.list_widget.count()):
-        #    item = self.list_widget.item(i)
-        #    items.append(item.text())
-        
-        # Сохраняем в модель вкладки
-        #self.tab.data["items"] = items
+
         items = [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
         new_data = {"items": items}
         ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
-
         self._dirty = False  # Сбрасываем флаг изменений
-        
         print(f"💾 ListTabWidget: сохранено {len(items)} элементов")
-

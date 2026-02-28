@@ -26,6 +26,7 @@ from widgets import BaseTabWidget
 from core.file_service import FileService
 from core.content_service import ContentService
 
+
 class FilesTabWidget(BaseTabWidget):
     """
     Вкладка файлов.
@@ -38,19 +39,16 @@ class FilesTabWidget(BaseTabWidget):
         }
     ]
     """
-    
     def __init__(self, node_content, tab, parent=None):
         super().__init__(node_content, tab, parent)
-        self.node_id = node_content.node_id # берём из node_content
+        self.node_id = node_content.node_id # берем из node_content
         self.file_service = FileService()
         self.icon_provider = QFileIconProvider()
         self.build_ui()
         self.load_from_model()
 
-    # --------------------------------------------------
-    # Построение интерфейса
-    # --------------------------------------------------
     def build_ui(self):
+        """Построение интерфейса вкладки"""
         layout = QVBoxLayout(self)
 
         # Список файлов
@@ -79,10 +77,8 @@ class FilesTabWidget(BaseTabWidget):
         self.list_widget.itemDoubleClicked.connect(self.open_file)
         self.list_widget.model().rowsMoved.connect(self.on_rows_moved)
 
-    # --------------------------------------------------
-    # Загрузка данных в UI
-    # --------------------------------------------------
     def load_from_model(self):
+        """Загрузить данные из модели"""
         self.list_widget.clear()
 
         items = self.tab.data.get("items", [])
@@ -103,10 +99,8 @@ class FilesTabWidget(BaseTabWidget):
 
         self._dirty = False
 
-    # --------------------------------------------------
-    # Сохранение данных в модель
-    # --------------------------------------------------
     def save_to_model(self):
+        """Сохранение данных в модель"""
         if not self._dirty:
             print("💾 FilesTabWidget: нет изменений для сохранения")
             return
@@ -122,16 +116,13 @@ class FilesTabWidget(BaseTabWidget):
                 "size": size
             })
 
-        #self.tab.data["items"] = items
         new_data = {"items": items}
         ContentService.update_tab_data(self.node_content, self.tab.tab_id, new_data)
         self._dirty = False
         print(f"💾 FilesTabWidget: сохранено {len(items)} файлов")
 
-    # --------------------------------------------------
-    # Добавление файла через диалог
-    # --------------------------------------------------
     def add_file_dialog(self):
+        """Добавление файла через диалог"""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Выберите файл",
@@ -141,11 +132,8 @@ class FilesTabWidget(BaseTabWidget):
         if file_path:
             self.add_file(file_path)
 
-    # --------------------------------------------------
-    # Добавление файла (копирование в папку узла)
-    # --------------------------------------------------
-
     def add_file(self, source_path):
+        """Добавление файла (копирование в папку узла)"""
         destination_path = self.file_service.add_file(self.node_id, source_path)
         if not destination_path:
             return
@@ -163,13 +151,8 @@ class FilesTabWidget(BaseTabWidget):
         self.mark_dirty()
         self.save_to_model()
         
-
-
-    # --------------------------------------------------
-    # Удаление выбранного файла
-    # --------------------------------------------------
     def remove_selected_file(self):
-        """Удалить выбранный файл после подтверждения"""
+        """Удаление выбранного файла после подтверждения"""
         row = self.list_widget.currentRow()
         if row < 0:
             return
@@ -187,10 +170,6 @@ class FilesTabWidget(BaseTabWidget):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            # Удаляем физический файл, если он существует
-            #if file_path and os.path.exists(file_path):
-            #    try:
-            #        os.remove(file_path)
             if file_path:
                 try:
                     self.file_service.remove_file(file_path)
@@ -202,14 +181,11 @@ class FilesTabWidget(BaseTabWidget):
             self.mark_dirty()
 
     def delete_all_files(self):
-        """Удалить все файлы этой вкладки с диска (вызывается при удалении вкладки)"""
+        """Удаление всех файлов этой вкладки с диска (при удалении вкладки)"""
         items = self.tab.data.get("items", [])
         deleted_count = 0
         for file_data in items:
             file_path = file_data.get("path")
-            #if file_path and os.path.exists(file_path):
-            #    try:
-            #        os.remove(file_path)
             if file_path:
                 try:
                     self.file_service.remove_file(file_path)
@@ -220,10 +196,8 @@ class FilesTabWidget(BaseTabWidget):
         if deleted_count:
             print(f"Удалено файлов: {deleted_count}")
 
-    # --------------------------------------------------
-    # Открытие файла двойным кликом
-    # --------------------------------------------------
     def open_file(self, item):
+        """Открытие файла двойным кликом"""
         file_path = item.data(Qt.ItemDataRole.UserRole)
         #if not file_path or not os.path.exists(file_path):
         if not file_path or not self.file_service.file_exists(file_path):
@@ -231,32 +205,28 @@ class FilesTabWidget(BaseTabWidget):
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
 
-    # --------------------------------------------------
     # Drag & drop файлов извне
-    # --------------------------------------------------
     def dragEnterEvent(self, event):
+        """При перетаскивании файлов извне"""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
     def dropEvent(self, event):
+        """При отпускании файлов извне"""
         for url in event.mimeData().urls():
             file_path = url.toLocalFile()
             if file_path:
                 self.add_file(file_path)
         event.acceptProposedAction()
 
-    # --------------------------------------------------
-    # Изменение порядка элементов (перетаскивание)
-    # --------------------------------------------------
     def on_rows_moved(self, *args):
+        """Изменение порядка элементов"""
         self.mark_dirty()
         # Порядок сохранится при вызове save_to_model
 
-    # --------------------------------------------------
-    # Форматирование размера файла
-    # --------------------------------------------------
     @staticmethod
     def format_size(size):
+        """Форматирование размера файла"""
         for unit in ["B", "KB", "MB", "GB"]:
             if size < 1024:
                 return f"{size:.1f} {unit}"
