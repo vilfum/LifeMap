@@ -264,6 +264,8 @@ class MainWindow(QMainWindow):
             
             # Инициализируем сервис графа (теперь db_session существует)
             self.graph_service = GraphService(self.db_session)
+            # сцена должна иметь доступ к сервису
+            self.scene.graph_service = self.graph_service
 
             # Загружаем данные
             self.load_data()
@@ -312,8 +314,8 @@ class MainWindow(QMainWindow):
             if node.parent_id:
                 parent_item = self.scene.nodes.get(node.parent_id)
                 if parent_item:
-                    # TODO: Обновить флаг has_children
-                    pass
+                    # узел имеет родителя, значит у родителя есть хотя бы один ребёнок
+                    parent_item.set_has_children(True)
         
         # Центрируем вид на корневом узле
         if nodes:

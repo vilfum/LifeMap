@@ -173,7 +173,6 @@ class NodeContentEditorDialog(QDialog):
 
         # Кнопка добавления вкладки
         self.add_tab_button = QPushButton("Добавить вкладку")
-        #self.add_tab_button.setFixedSize(28, 28)
         self.add_tab_button.setToolTip("Добавить вкладку")
 
         self.add_tab_menu = QMenu(self)

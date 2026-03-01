@@ -145,3 +145,13 @@ QListWidget:focus {
 QListWidget::item:focus {
     outline: none;
 }
+
+/* Стили для QComboBox */
+QComboBox { background-color: #404040; color: #ffffff; border: 1px solid #555555; padding: 4px; }
+QComboBox QAbstractItemView { background-color: #404040; color: #ffffff; selection-background-color: #2a82da; }
+
+
+/* Дополнительные настройки для выпадающего */
+QComboBox::drop-down { border: none; background-color: transparent; }
+QComboBox::down-arrow { image: none; }
+

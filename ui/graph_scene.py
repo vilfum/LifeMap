@@ -47,10 +47,6 @@ class GraphScene(QGraphicsScene):
         self.node_edges = {}
 
         self.grid_size = 50
-        
-        # Состояние
-        #self.dragging = False
-        #self.drag_start = QPointF()
 
         # Отключаем индексирование для производительности (может вызывать артефакты)
         self.setItemIndexMethod(QGraphicsScene.ItemIndexMethod.NoIndex)
@@ -180,6 +176,50 @@ class GraphScene(QGraphicsScene):
         """Обновление флага наличия дочерних узлов"""
         if node_id in self.nodes:
             self.nodes[node_id].set_has_children(has_children)
+
+    # === новые вспомогательные методы для перемещения ======================
+    def find_item_for_node(self, node):
+        """Возвращает NodeItem, соответствующий модели node."""
+        for it in self.items():
+            if isinstance(it, NodeItem) and it.node_id == getattr(node, 'id', None):
+                return it
+        return None
+
+    def items_for_parent(self, node):
+        """Список моделей-дочерних узлов для заданного узла модели."""
+        if hasattr(self, 'graph_service') and self.graph_service:
+            return self.graph_service.get_children(node.id)
+        return []
+
+    def edges_for_node(self, node):
+        """Все EdgeItem, которые начинаются или заканчиваются в узле."""
+        return [e for e in self.items() if isinstance(e, EdgeItem) and (
+            e.from_item.node_id == node.id or e.to_item.node_id == node.id
+        )]
+
+    def relocate_subtree(self, node_item: NodeItem):
+        """Перемещает изображение узла (и его детей) под новым родителем."""
+        parent_node = None
+        if hasattr(self, 'graph_service') and self.graph_service:
+            parent_node = self.graph_service.get_node(node_item.node_id).parent_id
+        parent_item = self.nodes.get(parent_node)
+        if not parent_item:
+            return
+        px, py = parent_item.pos().x(), parent_item.pos().y()
+        offset_x = 0
+        offset_y = parent_item.boundingRect().height() + 50
+        new_pos = QPointF(px + offset_x, py + offset_y)
+
+        node_item.setPos(new_pos)
+        # обновляем все ребра, связанные с этим узлом
+        for edge in self.edges_for_node(node_item.scene().graph_service.get_node(node_item.node_id)):
+            edge.update_path()
+        # рекурсивно передвинуть детей
+        if hasattr(self, 'graph_service') and self.graph_service:
+            for child in self.graph_service.get_children(node_item.node_id):
+                child_item = self.nodes.get(child.id)
+                if child_item:
+                    self.relocate_subtree(child_item)
     
     def get_node_at(self, pos: QPointF) -> NodeItem:
         """Получение узла в указанной позиции"""

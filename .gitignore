@@ -87,3 +87,5 @@ htmlcov/
 # Legacy folder (FULL IGNORE)
 # ----------------------
 zoldik/
+
+resources/styles/light_new.pss

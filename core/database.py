@@ -282,6 +282,13 @@ class EncryptedSQLite:
             UPDATE nodes SET color = ? WHERE id = ?
         """, (color, node_id))
         self.conn.commit()
+
+    def update_node_parent(self, node_id: int, parent_id: Optional[int]):
+        """Смена родителя узла (parent_id может быть None)."""
+        self.cursor.execute("""
+            UPDATE nodes SET parent_id = ? WHERE id = ?
+        """, (parent_id, node_id))
+        self.conn.commit()
     
     def toggle_node_collapsed(self, node_id: int):
         """Переключение состояния свернутости узла"""

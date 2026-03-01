@@ -46,6 +46,52 @@ class GraphService:
         """Возвращает все узлы"""
         return self.db_session.get_all_nodes()
 
+    def is_descendant(self, candidate: Node, ancestor: Node) -> bool:
+        """Возвращает True, если candidate является (в любом поколении) потомком ancestor."""
+        cur_id = candidate.parent_id
+        while cur_id is not None:
+            if cur_id == ancestor.id:
+                return True
+            cur = self.get_node(cur_id)
+            cur_id = cur.parent_id if cur else None
+        return False
+
+    def change_parent(self, node_id: int, new_parent_id: int) -> Tuple[Optional[int], int, Optional[int], int]:
+        """Перемещает узел на новый родитель.
+
+        Возвращает кортеж (old_parent_id, new_parent_id, old_edge_id, new_edge_id).
+        Если старой связи не было, old_edge_id == None.
+        """
+        node = self.get_node(node_id)
+        if not node:
+            return None, new_parent_id, None, None
+
+        old_parent_id = node.parent_id
+        if old_parent_id == new_parent_id:
+            return old_parent_id, new_parent_id, None, None
+
+        old_edge_id = None
+        # Удаляем старую связь (если была)
+        if old_parent_id is not None:
+            for edge in self.get_all_edges():
+                if edge.from_node_id == old_parent_id and edge.to_node_id == node_id:
+                    old_edge_id = edge.id
+                    self.delete_edge(edge.id)
+                    break
+
+        # меняем parent_id непосредственно в таблице nodes
+        self.db_session.update_node_parent(node_id, new_parent_id)
+
+        # добавляем новую связь
+        new_edge = self.add_edge(new_parent_id, node_id)
+        new_edge_id = new_edge.id if new_edge else None
+
+        # debug log
+        print(f"GraphService.change_parent: node={node_id} old_parent={old_parent_id} new_parent={new_parent_id} "
+              f"old_edge={old_edge_id} new_edge={new_edge_id}")
+
+        return old_parent_id, new_parent_id, old_edge_id, new_edge_id
+
     def get_children(self, parent_id: int) -> List[Node]:
         """Возвращает прямых потомков узла"""
         return self.db_session.get_children(parent_id)
