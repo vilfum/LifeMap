@@ -41,7 +41,7 @@ from core.graph_service import GraphService
 from core.models import ContentTab, ContentTabType, Node, Edge, LineType, NodeContent
 
 from ui.editor_dialog import NodeContentEditorDialog
-from ui.themes import set_dark_mode, get_stylesheet, is_dark_mode
+from ui.themes import apply_theme, set_dark_mode, is_dark_mode
 
 
 class PasswordDialog(QDialog):
@@ -524,52 +524,67 @@ class MainWindow(QMainWindow):
         self.save_theme_setting(self.dark_mode)
         self.apply_theme()
     
+    # def apply_theme(self):
+    #     """Применить текущую тему на основе self.dark_mode"""
+    #     # Получаем текущее приложение
+    #     app = QApplication.instance()
+    #     set_dark_mode(self.dark_mode)
+
+    #     if self.dark_mode:
+    #         # ТЕМНАЯ ТЕМА
+    #         # Устанавливаем темную палитру
+    #         dark_palette = QPalette()
+        
+    #         # Базовые цвета
+    #         dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+    #         dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+    #         dark_palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+    #         dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+    #         dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
+    #         dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+    #         dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+    #         dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+    #         dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+    #         dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    #         dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+    #         dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    #         dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
+        
+    #         # Устанавливаем палитру
+    #         app.setPalette(dark_palette)
+    #         # Фон сцены для темной темы
+    #         self.scene.setBackgroundBrush(QColor(45, 45, 45))
+    #         self.theme_action.setText("☀️ Светлая тема")
+        
+    #     else:
+    #         # СВЕТЛАЯ ТЕМА
+    #         # Восстанавливаем стандартную палитру Fusion
+    #         app.setPalette(app.style().standardPalette())
+        
+    #         # Фон сцены для светлой темы
+    #         self.scene.setBackgroundBrush(QColor(245, 245, 245))
+    #         self.theme_action.setText("🌙 Темная тема")
+
+    #     # Загружаем стили из .qss файла
+    #     stylesheet = get_stylesheet()
+    #     app.setStyleSheet(stylesheet)
+    #     # Обновляем все виджеты
+    #     app.processEvents()
+    #     self.update()
+
     def apply_theme(self):
-        """Применить текущую тему на основе self.dark_mode"""
-        # Получаем текущее приложение
-        app = QApplication.instance()
-        set_dark_mode(self.dark_mode)
+        """Применить текущую тему"""
+
+        apply_theme(self.dark_mode)
 
         if self.dark_mode:
-            # ТЕМНАЯ ТЕМА
-            # Устанавливаем темную палитру
-            dark_palette = QPalette()
-        
-            # Базовые цвета
-            dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
-            dark_palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
-            dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
-            dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
-            dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
-            dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
-            dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
-            dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-            dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
-            dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
-        
-            # Устанавливаем палитру
-            app.setPalette(dark_palette)
-            # Фон сцены для темной темы
-            self.scene.setBackgroundBrush(QColor(45, 45, 45))
+            self.scene.setBackgroundBrush(QColor(31, 33, 38))
             self.theme_action.setText("☀️ Светлая тема")
-        
         else:
-            # СВЕТЛАЯ ТЕМА
-            # Восстанавливаем стандартную палитру Fusion
-            app.setPalette(app.style().standardPalette())
-        
-            # Фон сцены для светлой темы
-            self.scene.setBackgroundBrush(QColor(245, 245, 245))
+            self.scene.setBackgroundBrush(QColor(243, 244, 247))
             self.theme_action.setText("🌙 Темная тема")
 
-        # Загружаем стили из .qss файла
-        stylesheet = get_stylesheet()
-        app.setStyleSheet(stylesheet)
-        # Обновляем все виджеты
-        app.processEvents()
+        QApplication.processEvents()
         self.update()
 
     def closeEvent(self, event):

@@ -89,3 +89,7 @@ htmlcov/
 zoldik/
 
 resources/styles/light_new.pss
+
+dist/
+build/
+*.spec
