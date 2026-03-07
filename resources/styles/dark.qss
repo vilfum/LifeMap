@@ -1,157 +1,385 @@
-/* dark.qss */
+/* =========================================================
+   LifeMap Dark Theme
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   Основная палитра
+------------------------------------------------------------
+Фон приложения     #1f2126
+Поверхности        #2a2d34
+Hover              #333741
+Pressed / selected #3c404b
+Границы            #444955
+Текст основной     #e6e8eb
+Текст вторичный    #a8adb7
+
+--------------------------------------------------------- */
+
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+QWidget {
+    background-color: #1f2126;
+    color: #e6e8eb;
+    selection-background-color: #3c404b;
+    selection-color: #ffffff;
+    font-size: 10pt;
+}
+
+
+/* =========================================================
+   MAIN WINDOW
+   ========================================================= */
+
+QMainWindow {
+    background-color: #1f2126;
+}
+
+
+/* =========================================================
+   MENU
+   ========================================================= */
+
+QMenuBar {
+    background-color: #2a2d34;
+    border-bottom: 1px solid #444955;
+}
+
+QMenuBar::item {
+    padding: 6px 12px;
+    background: transparent;
+}
+
+QMenuBar::item:selected {
+    background: #333741;
+}
+
+
 QMenu {
-    background-color: #353535;
-    border: 1px solid #555555;
-    color: #ffffff;
-    padding: 4px;
+    background-color: #2a2d34;
+    border: 1px solid #444955;
+    padding: 6px;
 }
-            
+
 QMenu::item {
-    background-color: transparent;
-    padding: 6px 24px 6px 8px;
-    margin: 2px 4px;
-    border-radius: 3px;
-}
-            
-QMenu::item:selected {
-    background-color: #2a82da;
-    color: #ffffff;
-}
-            
-QMenu::item:disabled {
-    color: #777777;
-}
-            
-QMenu::separator {
-    height: 1px;
-    background-color: #555555;
-    margin: 4px 8px;
-}
-            
-/* Стиль для панели инструментов в темной теме */
-QToolBar {
-    background-color: #2b2b2b;
-    border: none;
-    spacing: 3px;
-    padding: 2px;
-}
-            
-QToolBar QToolButton {
-    background-color: transparent;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    padding: 4px;
-    color: #ffffff;
-}
-            
-QToolBar QToolButton:hover {
-    background-color: #404040;
-    border: 1px solid #505050;
-}
-            
-QToolBar QToolButton:pressed {
-    background-color: #505050;
-}
-            
-/* Стиль для статусбара */
-QStatusBar {
-    background-color: #2b2b2b;
-    color: #ffffff;
-}
-            
-/* Стиль для QGraphicsView */
-QGraphicsView {
-    border: 0px;
-    outline: 0px;
-    background: transparent;
-}
-            
-QGraphicsView::rubberBand {
-    border: 2px dashed #2196F3;
-    background-color: rgba(33, 150, 243, 30);
-}
-              
-/* ===== QCalendarWidget DARK ===== */
-QCalendarWidget {
-    background-color: #353535;
-    color: white;
-}
-
-QCalendarWidget QWidget#qt_calendar_navigationbar {
-    background-color: #2b2b2b;
-}
-
-QCalendarWidget QToolButton {
-    background: transparent;
-    border: none;
-    color: white;
-    icon-size: 18px;
-}
-
-QCalendarWidget QToolButton:hover {
-    background-color: #404040;
-}
-
-QCalendarWidget QHeaderView::section {
-    background-color: #2b2b2b;
-    color: white;
-    border: none;
-}
-QCalendarWidget QAbstractButton {
-    color: white;
-}
-QCalendarWidget QToolButton {
-    qproperty-icon: none;
-}
-QCalendarWidget QToolButton#qt_calendar_prevmonth {
-    qproperty-text: "<";
-}
-
-QCalendarWidget QToolButton#qt_calendar_nextmonth {
-    qproperty-text: ">";
-}
-
-/* ===== QMessageBox DARK ===== */
-QMessageBox {
-   background-color: #353535;
-}
-
-QMessageBox QLabel {
-    color: #ffffff;
-}
-
-QMessageBox QPushButton {
-    background-color: #2b2b2b;
-    color: #ffffff;
-    border: 1px solid #555555;
-    padding: 4px 12px;
+    padding: 6px 20px;
     border-radius: 4px;
 }
 
-QMessageBox QPushButton:hover {
-    background-color: #404040;
+QMenu::item:selected {
+    background: #333741;
 }
 
-QListWidget::item:selected {
+QMenu::separator {
+    height: 1px;
+    background: #444955;
+    margin: 6px 4px;
+}
+
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
+
+QToolBar {
+    background: #2a2d34;
+    border-bottom: 1px solid #444955;
+    spacing: 4px;
+    padding: 4px;
+}
+
+QToolButton {
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+QToolButton:hover {
+    background: #333741;
+}
+
+QToolButton:pressed {
+    background: #3c404b;
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+QPushButton {
+    background: #2a2d34;
+    border: 1px solid #444955;
+    border-radius: 6px;
+    padding: 6px 12px;
+}
+
+QPushButton:hover {
+    background: #333741;
+}
+
+QPushButton:pressed {
+    background: #3c404b;
+}
+
+QPushButton:disabled {
+    background: #26282e;
+    color: #7a7f88;
+}
+
+
+/* =========================================================
+   INPUT FIELDS
+   ========================================================= */
+
+QLineEdit,
+QTextEdit,
+QPlainTextEdit,
+QSpinBox,
+QDoubleSpinBox {
+
+    background: #2a2d34;
+    border: 1px solid #444955;
+    border-radius: 5px;
+    padding: 4px;
+}
+
+QLineEdit:focus,
+QTextEdit:focus {
+    border: 1px solid #5a6070;
+}
+
+
+/* =========================================================
+   COMBOBOX
+   ========================================================= */
+
+QComboBox {
+
+    background: #2a2d34;
+    border: 1px solid #444955;
+    border-radius: 5px;
+    padding: 4px 8px;
+}
+
+QComboBox:hover {
+    background: #333741;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 0px;     /* убираем стрелку */
+}
+
+QComboBox::down-arrow {
+    image: none;
+}
+
+QComboBox QAbstractItemView {
+    background: #2a2d34;
+    border: 1px solid #444955;
+    selection-background-color: #3c404b;
+}
+
+
+/* =========================================================
+   TABS
+   ========================================================= */
+
+QTabWidget::pane {
+    border: 1px solid #444955;
+    background: #1f2126;
+}
+
+QTabBar::tab {
+
+    background: #2a2d34;
+    padding: 6px 14px;
+    border: 1px solid #444955;
+    border-bottom: none;
+}
+
+QTabBar::tab:selected {
+    background: #3c404b;
+}
+
+QTabBar::tab:hover {
+    background: #333741;
+}
+
+
+/* =========================================================
+   LIST / TREE
+   ========================================================= */
+
+QListWidget,
+QTreeWidget {
+
+    background: #2a2d34;
+    border: 1px solid #444955;
+}
+
+QListWidget::item:selected,
+QTreeWidget::item:selected {
+
+    background: #3c404b;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+QScrollBar:vertical {
+
+    background: #1f2126;
+    width: 10px;
+}
+
+QScrollBar::handle:vertical {
+
+    background: #3c404b;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #4a4f5b;
+}
+
+QScrollBar::add-line,
+QScrollBar::sub-line {
+    height: 0px;
+}
+
+
+/* =========================================================
+   STATUSBAR
+   ========================================================= */
+
+QStatusBar {
+    background: #2a2d34;
+    border-top: 1px solid #444955;
+}
+
+
+/* =========================================================
+   GRAPH VIEW (карта)
+   ========================================================= */
+
+QGraphicsView {
+    border: none;
+    background: #1f2126;
+}
+
+QGraphicsView::rubberBand {
+
+    border: 2px dashed #6a6f7d;
+    background: rgba(255,255,255,0.05);
+}
+
+
+/* =========================================================
+   CALENDAR
+   ========================================================= */
+
+/* ===== Календарь ===== */
+
+QCalendarWidget {
+    background: #2a2d34;
+    border: 1px solid #444955;
+}
+
+QCalendarWidget QWidget {
+    background: #2a2d34;
+}
+
+QCalendarWidget QAbstractItemView {
+    background: #2a2d34;
+    color: #e6e8eb;
+    selection-background-color: #3c404b;
+    selection-color: #ffffff;
+}
+
+QCalendarWidget QToolButton {
+    background: transparent;
+    border: none;
+    padding: 4px;
+}
+
+QCalendarWidget QToolButton:hover {
+    background: #333741;
+}
+
+QCalendarWidget QMenu {
+    background: #2a2d34;
+}
+
+
+QAbstractItemView {
+    background: #2a2d34;
+    color: #e6e8eb;
+    border: 1px solid #444955;
+    selection-background-color: #3c404b;
+}
+
+/* === ОСНОВА === */
+
+QWidget {
+    background-color: #353535;
+    color: white;
+}
+
+/* === ПОЛЯ ВВОДА === */
+
+QLineEdit {
+    background-color: #252525;
+    border: 1px solid #555;
+    padding: 3px;
+}
+
+/* === КНОПКИ === */
+
+QPushButton {
+    background-color: #404040;
+    border: 1px solid #555;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+QPushButton:hover {
+    background-color: #505050;
+}
+
+/* === SCROLL === */
+
+QScrollArea {
+    border: none;
+}
+
+/* === DATE EDIT === */
+
+QDateEdit {
+    background-color: #252525;
+    border: 1px solid #555;
+    padding: 3px;
+}
+
+/* === КАЛЕНДАРЬ === */
+
+QCalendarWidget QWidget {
+    background-color: #2b2b2b;
+    color: white;
+}
+
+QCalendarWidget QToolButton {
     background-color: #404040;
     color: white;
-    outline: none;
 }
 
-QListWidget:focus {
-    outline: none;
+QCalendarWidget QAbstractItemView {
+    background-color: #2b2b2b;
+    selection-background-color: #505050;
 }
-
-QListWidget::item:focus {
-    outline: none;
-}
-
-/* Стили для QComboBox */
-QComboBox { background-color: #404040; color: #ffffff; border: 1px solid #555555; padding: 4px; }
-QComboBox QAbstractItemView { background-color: #404040; color: #ffffff; selection-background-color: #2a82da; }
-
-
-/* Дополнительные настройки для выпадающего */
-QComboBox::drop-down { border: none; background-color: transparent; }
-QComboBox::down-arrow { image: none; }
-

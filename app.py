@@ -22,6 +22,8 @@ from ui.main_window import MainWindow
 def run():
     print("app.run() started")
     app = QApplication(sys.argv)
+    with open("resources/styles/dark.qss", "r", encoding="utf-8") as f:
+        app.setStyleSheet(f.read())
 
     window = MainWindow()
     window.show()

@@ -89,6 +89,8 @@ htmlcov/
 zoldik/
 
 resources/styles/light_new.pss
+resources/styles/dark_old.qss
+resources/styles/light_old.qss
 
 dist/
 build/

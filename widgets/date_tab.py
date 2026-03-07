@@ -40,9 +40,8 @@ class DatesTabWidget(BaseTabWidget):
         main_layout.setSpacing(0)                    # <-- Убираем зазор между scroll и кнопкой
 
         # Контейнер для событий
-        self.container = QWidget()
-        self.container_layout = QVBoxLayout(self.container)
-        self._apply_theme_to_widget(self.container)
+        self.container = DatesContainer()
+        self.container_layout = self.container.layout
         self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.container_layout.setContentsMargins(5, 5, 5, 5)
         self.container_layout.setSpacing(5)
@@ -56,7 +55,7 @@ class DatesTabWidget(BaseTabWidget):
         self.scroll.setWidget(self.container)
         self.scroll.setFrameShape(QScrollArea.Shape.NoFrame)
         self.scroll.setContentsMargins(0, 0, 0, 0)    # <-- убираем отступы
-        self._apply_theme_to_widget(self.scroll)      # <-- сразу применяем тему
+        # self._apply_theme_to_widget(self.scroll)      # <-- сразу применяем тему
 
         main_layout.addWidget(self.scroll)
 
@@ -65,117 +64,117 @@ class DatesTabWidget(BaseTabWidget):
         self.add_button.clicked.connect(self.add_event_row)
         main_layout.addWidget(self.add_button)
 
-    def _apply_theme_to_widget(self, widget):
-        """Применить тему к динамически созданному виджету"""
-        dark_mode = is_dark_mode()  # получаем состояние темы из глобального модуля
+    # def _apply_theme_to_widget(self, widget):
+    #     """Применить тему к динамически созданному виджету"""
+    #     dark_mode = is_dark_mode()  # получаем состояние темы из глобального модуля
 
-        # --- 1. Для контейнеров (QWidget, кроме специальных) ---
-        if isinstance(widget, QWidget) and not isinstance(widget, 
-                (QLineEdit, QDateEdit, QPushButton, QTextEdit, QListWidget, QScrollArea)):
-            color = "#353535" if dark_mode else "#f5f5f5"
-            widget.setStyleSheet(f"background-color: {color};")
-            widget.setAutoFillBackground(True)
-            return
+    #     # --- 1. Для контейнеров (QWidget, кроме специальных) ---
+    #     if isinstance(widget, QWidget) and not isinstance(widget, 
+    #             (QLineEdit, QDateEdit, QPushButton, QTextEdit, QListWidget, QScrollArea)):
+    #         color = "#353535" if dark_mode else "#f5f5f5"
+    #         widget.setStyleSheet(f"background-color: {color};")
+    #         widget.setAutoFillBackground(True)
+    #         return
 
-        # --- 1.1 Для QScrollArea ---
-        elif isinstance(widget, QScrollArea):
-            color = "#353535" if dark_mode else "#f5f5f5"
-            widget.setStyleSheet(f"QScrollArea {{ background-color: {color}; border: none; }}")
-            widget.viewport().setStyleSheet(f"background-color: {color};")
-            widget.setAutoFillBackground(True)
-            widget.viewport().setAutoFillBackground(True)
-            return
+    #     # --- 1.1 Для QScrollArea ---
+    #     elif isinstance(widget, QScrollArea):
+    #         color = "#353535" if dark_mode else "#f5f5f5"
+    #         widget.setStyleSheet(f"QScrollArea {{ background-color: {color}; border: none; }}")
+    #         widget.viewport().setStyleSheet(f"background-color: {color};")
+    #         widget.setAutoFillBackground(True)
+    #         widget.viewport().setAutoFillBackground(True)
+    #         return
 
-        # --- 2. Для полей ввода и кнопок ---
-        elif isinstance(widget, QLineEdit):
-            if dark_mode:
-                widget.setStyleSheet("""
-                    QLineEdit {
-                        background-color: #252525;
-                        color: white;
-                        border: 1px solid #555;
-                        padding: 3px;
-                    }
-                """)
-            else:
-                widget.setStyleSheet("""
-                    QLineEdit {
-                        background-color: white;
-                        color: black;
-                        border: 1px solid #ccc;
-                        padding: 3px;
-                    }
-                """)
-            widget.setAutoFillBackground(True)
+    #     # --- 2. Для полей ввода и кнопок ---
+    #     elif isinstance(widget, QLineEdit):
+    #         if dark_mode:
+    #             widget.setStyleSheet("""
+    #                 QLineEdit {
+    #                     background-color: #252525;
+    #                     color: white;
+    #                     border: 1px solid #555;
+    #                     padding: 3px;
+    #                 }
+    #             """)
+    #         else:
+    #             widget.setStyleSheet("""
+    #                 QLineEdit {
+    #                     background-color: white;
+    #                     color: black;
+    #                     border: 1px solid #ccc;
+    #                     padding: 3px;
+    #                 }
+    #             """)
+    #         widget.setAutoFillBackground(True)
 
-        elif isinstance(widget, QDateEdit):
-            if dark_mode:
-                widget.setStyleSheet("""
-                    QDateEdit {
-                        background-color: #252525;
-                        color: white;
-                        border: 1px solid #555;
-                        padding: 3px;
-                    }
-                    QDateEdit::drop-down {
-                        background-color: #404040;
-                        border: 1px solid #555;
-                    }
-                """)
-            else:
-                widget.setStyleSheet("""
-                    QDateEdit {
-                        background-color: white;
-                        color: black;
-                        border: 1px solid #ccc;
-                        padding: 3px;
-                    }
-                    QDateEdit::drop-down {
-                        background-color: #f0f0f0;
-                        border: 1px solid #ccc;
-                    }
-                """)
-            widget.setAutoFillBackground(True)
+    #     elif isinstance(widget, QDateEdit):
+    #         if dark_mode:
+    #             widget.setStyleSheet("""
+    #                 QDateEdit {
+    #                     background-color: #252525;
+    #                     color: white;
+    #                     border: 1px solid #555;
+    #                     padding: 3px;
+    #                 }
+    #                 QDateEdit::drop-down {
+    #                     background-color: #404040;
+    #                     border: 1px solid #555;
+    #                 }
+    #             """)
+    #         else:
+    #             widget.setStyleSheet("""
+    #                 QDateEdit {
+    #                     background-color: white;
+    #                     color: black;
+    #                     border: 1px solid #ccc;
+    #                     padding: 3px;
+    #                 }
+    #                 QDateEdit::drop-down {
+    #                     background-color: #f0f0f0;
+    #                     border: 1px solid #ccc;
+    #                 }
+    #             """)
+    #         widget.setAutoFillBackground(True)
 
-        elif isinstance(widget, QPushButton):
-            if dark_mode:
-                widget.setStyleSheet("""
-                    QPushButton {
-                        background-color: #404040;
-                        color: white;
-                        border: 1px solid #555;
-                        padding: 5px;
-                        border-radius: 3px;
-                    }
-                    QPushButton:hover {
-                        background-color: #505050;
-                    }
-                    QPushButton:pressed {
-                        background-color: #606060;
-                    }
-                """)
-            else:
-                widget.setStyleSheet("""
-                    QPushButton {
-                        background-color: #f0f0f0;
-                        color: black;
-                        border: 1px solid #ccc;
-                        padding: 5px;
-                        border-radius: 3px;
-                    }
-                    QPushButton:hover {
-                        background-color: #e0e0e0;
-                    }
-                    QPushButton:pressed {
-                        background-color: #d0d0d0;
-                    }
-                """)
-            widget.setAutoFillBackground(True)
+    #     elif isinstance(widget, QPushButton):
+    #         if dark_mode:
+    #             widget.setStyleSheet("""
+    #                 QPushButton {
+    #                     background-color: #404040;
+    #                     color: white;
+    #                     border: 1px solid #555;
+    #                     padding: 5px;
+    #                     border-radius: 3px;
+    #                 }
+    #                 QPushButton:hover {
+    #                     background-color: #505050;
+    #                 }
+    #                 QPushButton:pressed {
+    #                     background-color: #606060;
+    #                 }
+    #             """)
+    #         else:
+    #             widget.setStyleSheet("""
+    #                 QPushButton {
+    #                     background-color: #f0f0f0;
+    #                     color: black;
+    #                     border: 1px solid #ccc;
+    #                     padding: 5px;
+    #                     border-radius: 3px;
+    #                 }
+    #                 QPushButton:hover {
+    #                     background-color: #e0e0e0;
+    #                 }
+    #                 QPushButton:pressed {
+    #                     background-color: #d0d0d0;
+    #                 }
+    #             """)
+    #         widget.setAutoFillBackground(True)
 
     def add_event_row(self, title="", date=None):
         """Добавление строки события"""
         row_widget = QWidget()
-        self._apply_theme_to_widget(row_widget)
+        # self._apply_theme_to_widget(row_widget)
 
         row_layout = QHBoxLayout(row_widget)
         row_layout.setContentsMargins(0, 0, 0, 0)
@@ -188,7 +187,7 @@ class DatesTabWidget(BaseTabWidget):
         item_text = title if title else f"Событие {self.container_layout.count() + 1}"
         title_edit.setPlaceholderText("Название события")
         title_edit.setText(item_text)
-        self._apply_theme_to_widget(title_edit)
+        # self._apply_theme_to_widget(title_edit)
 
         # Поле даты
         date_edit = QDateEdit()
@@ -199,12 +198,12 @@ class DatesTabWidget(BaseTabWidget):
             date_edit.setDate(date)
         else:
             date_edit.setDate(QDate.currentDate())
-        self._apply_theme_to_widget(date_edit)
+        # self._apply_theme_to_widget(date_edit)
 
         # Кнопка удаления
         remove_button = QPushButton("Удалить дату")
         #remove_button.setFixedWidth(30)
-        self._apply_theme_to_widget(remove_button)
+        # self._apply_theme_to_widget(remove_button)
 
         # Добавляем в layout
         row_layout.addWidget(title_edit, 1)
@@ -230,33 +229,35 @@ class DatesTabWidget(BaseTabWidget):
 
     def refresh_theme(self):
         """Обновить тему для всех элементов вкладки"""
-        # Обновляем фон самой вкладки
-        self._apply_theme_to_widget(self)
-        # Обновляем фон контейнера
-        self._apply_theme_to_widget(self.container)
-        # Обновляем фон скролл-области
-        if hasattr(self, 'scroll'):
-            self._apply_theme_to_widget(self.scroll)
+        # # Обновляем фон самой вкладки
+        # # self._apply_theme_to_widget(self)
+        # # Обновляем фон контейнера
+        # # self._apply_theme_to_widget(self.container)
+        # # Обновляем фон скролл-области
+        # if hasattr(self, 'scroll'):
+        #     # self._apply_theme_to_widget(self.scroll)
 
-        # Обновляем каждую строку событий
-        for i in range(self.container_layout.count()):
-            item = self.container_layout.itemAt(i)
-            if not item:
-                continue
-            row_widget = item.widget()
-            if not row_widget:
-                continue
+        # # Обновляем каждую строку событий
+        # for i in range(self.container_layout.count()):
+        #     item = self.container_layout.itemAt(i)
+        #     if not item:
+        #         continue
+        #     row_widget = item.widget()
+        #     if not row_widget:
+        #         continue
 
-            # Обновляем фон самой строки
-            self._apply_theme_to_widget(row_widget)
+        #     # Обновляем фон самой строки
+        #     # self._apply_theme_to_widget(row_widget)
 
-            # Обновляем дочерние виджеты в строке
-            layout = row_widget.layout()
-            if layout:
-                for j in range(layout.count()):
-                    w = layout.itemAt(j).widget()
-                    if w:
-                        self._apply_theme_to_widget(w)
+        #     # Обновляем дочерние виджеты в строке
+        #     layout = row_widget.layout()
+        #     if layout:
+        #         for j in range(layout.count()):
+        #             w = layout.itemAt(j).widget()
+        #             # if w:
+        #             #     self._apply_theme_to_widget(w)
+        self.style().polish(self)
+        self.update()
 
     def load_from_model(self):
         """Загружает данные из модели в виджет"""
