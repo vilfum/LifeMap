@@ -57,11 +57,4 @@
 
 &nbsp;  pip install PyQt6 pycryptodome reportlab python-dateutil
 ```
-## Поддержать проект
 
-👉 [Поддержать на Boosty](https://boosty.to/vilfum/donate)
-
-🌍 **Для международных донатов (крипта):**  
-USDT (TRC20): `TJfCPKBVh1gcWjxMyAeD4LPsfaXdtoiYEv`
-
-Спасибо за поддержку! ❤️
